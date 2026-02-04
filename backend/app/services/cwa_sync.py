@@ -8,11 +8,10 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models.station import Station
+from app.config import settings
 
 
 # CWA API 設定
-CWA_API_BASE = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
-CWA_AUTH_KEY = "CWA-6B37748B-1E62-48B8-B173-23161C608A79"
 STATION_ENDPOINT = "O-A0001-001"
 
 
@@ -76,8 +75,8 @@ class CWASyncService:
         Raises:
             httpx.HTTPError: API 請求失敗時
         """
-        url = f"{CWA_API_BASE}/{STATION_ENDPOINT}"
-        params = {"Authorization": CWA_AUTH_KEY}
+        url = f"{settings.cwa_api_base}/{STATION_ENDPOINT}"
+        params = {"Authorization": settings.cwa_api_key}
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, params=params)

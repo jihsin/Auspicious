@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{DATA_DIR / 'auspicious.db'}"
     data_dir: Path = DATA_DIR
 
+    # CWA OpenData API 設定
+    cwa_api_key: str = "CWA-6B37748B-1E62-48B8-B173-23161C608A79"
+    cwa_api_base: str = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
