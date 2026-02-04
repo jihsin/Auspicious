@@ -242,27 +242,35 @@ class HistoricalWeatherAnalyzer:
         Returns:
             包含統計資料的字典
         """
-        # 計算目標日期的 day_of_year（使用非閏年）
-        target_date = pd.Timestamp(year=2023, month=month, day=day)
+        # 計算目標日期的 day_of_year（使用閏年以支援 2/29）
+        # 2024 是閏年，可以處理所有 366 天
+        target_date = pd.Timestamp(year=2024, month=month, day=day)
         target_doy = target_date.dayofyear
 
         # 處理跨年邊界
-        # 建立視窗範圍（考慮年首年尾）
+        # 建立視窗範圍（考慮年首年尾，使用 366 天以支援閏年）
         window_doys = []
         for offset in range(-window_days, window_days + 1):
             doy = target_doy + offset
             if doy < 1:
-                doy += 365
-            elif doy > 365:
-                doy -= 365
+                doy += 366
+            elif doy > 366:
+                doy -= 366
             window_doys.append(doy)
 
         # 篩選視窗內的資料
-        # 需要特別處理閏年（366 天）
-        mask = self.data["day_of_year"].isin(window_doys) | (
-            (self.data["day_of_year"] == 366)
-            & (366 - 365 + target_doy in window_doys)
-        )
+        # 由於資料中的 day_of_year 可能來自閏年或非閏年，
+        # 需要同時匹配閏年和非閏年的 day_of_year
+        # 非閏年的日期在 3/1 之後會比閏年少 1
+        non_leap_doys = []
+        for doy in window_doys:
+            non_leap_doys.append(doy)
+            # 對於閏年中 3/1 之後的日期，也要匹配非閏年的對應日期
+            if doy > 60:  # 閏年的 2/29 是第 60 天
+                non_leap_doys.append(doy - 1)
+
+        all_doys = set(window_doys + non_leap_doys)
+        mask = self.data["day_of_year"].isin(all_doys)
         window_data = self.data[mask]
 
         # 計算各項統計

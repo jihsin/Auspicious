@@ -13,5 +13,6 @@ class Base(DeclarativeBase):
 
 # 匯出所有模型
 from app.models.observation import RawObservation
+from app.models.statistics import DailyStatistics
 
-__all__ = ["Base", "RawObservation"]
+__all__ = ["Base", "RawObservation", "DailyStatistics"]
