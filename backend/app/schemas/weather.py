@@ -4,7 +4,7 @@
 from datetime import datetime
 from typing import Generic, Optional, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
@@ -24,6 +24,28 @@ class StationInfo(BaseModel):
                 "city": "臺北市"
             }
         }
+
+
+class StationInfoExtended(BaseModel):
+    """站點詳細資訊（含座標）"""
+
+    station_id: str = Field(..., description="氣象站代碼")
+    name: str = Field(..., description="站點名稱")
+    county: Optional[str] = Field(None, description="縣市")
+    town: Optional[str] = Field(None, description="鄉鎮市區")
+    latitude: float = Field(..., description="緯度")
+    longitude: float = Field(..., description="經度")
+    altitude: Optional[float] = Field(None, description="海拔高度 (公尺)")
+    has_statistics: bool = Field(False, description="是否有統計資料")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NearestStationResponse(BaseModel):
+    """最近站點回應"""
+
+    station: StationInfoExtended = Field(..., description="站點資訊")
+    distance_km: float = Field(..., description="距離 (公里)")
 
 
 class TemperatureStats(BaseModel):
