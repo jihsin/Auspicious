@@ -85,14 +85,16 @@ class CWASyncService:
 
         stations = data.get("records", {}).get("Station", [])
 
-        # 解析並過濾有效站點
-        parsed = []
+        # 解析並過濾有效站點（使用 dict 去除重複 station_id）
+        parsed_dict = {}
         for raw in stations:
             station_data = parse_station_data(raw)
             if station_data:
-                parsed.append(station_data)
+                sid = station_data["station_id"]
+                # 如果重複，後面的資料會覆蓋前面的
+                parsed_dict[sid] = station_data
 
-        return parsed
+        return list(parsed_dict.values())
 
     async def sync_stations(self) -> dict:
         """同步所有站點資料到資料庫
