@@ -71,6 +71,18 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cnlunar"
+version = "0.2.4"
+description = "农历，中国农历历法项目，无需数据库环境，以《钦定协纪辨方书》为核心的python3 农历、黄历、二十四节气、节假日、星次、每日凶煞、每日值神、农历建除十二神、农历每日宜忌、彭祖百忌、每日五行、二十八星宿、天干地支、农历生辰八字、时辰凶吉等开源项目。"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "cnlunar-0.2.4-py3-none-any.whl", hash = "sha256:19689288604e86a3ef48dba23d39d6a7efbd5efabcb3923d4d656319762af4ea"},
+    {file = "cnlunar-0.2.4.tar.gz", hash = "sha256:a270238a657744dbc477cb48207b4dffe7c03100b327c81ae4622055d593463f"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1747,4 +1759,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "6f5981cc77aa2421f7e5a9646a7f6f8d6dfae9709e7d2e76d74e17e5a86b1b54"
+content-hash = "df32054f8e97dfd021c03a2c6945369f391671297bb468644fee6cba932ed863"

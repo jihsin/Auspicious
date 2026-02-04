@@ -4,5 +4,6 @@
 """
 
 from app.services.cwa_sync import CWASyncService
+from app.services.lunar import LunarService, get_lunar_info
 
-__all__ = ["CWASyncService"]
+__all__ = ["CWASyncService", "LunarService", "get_lunar_info"]
