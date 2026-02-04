@@ -3,27 +3,62 @@
 /**
  * 好日子 - 首頁
  * 顯示今日的歷史天氣統計資料
+ * 支援 GPS 定位和站點選擇
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import WeatherCard from "@/components/WeatherCard";
+import StationSelector from "@/components/StationSelector";
 import { fetchTodayWeather } from "@/lib/api";
-import { DailyWeatherData, ApiError } from "@/lib/types";
+import { DailyWeatherData, ApiError, StationInfoExtended } from "@/lib/types";
 
 // 預設站點：臺北
-const DEFAULT_STATION_ID = "466920";
+const DEFAULT_STATION: StationInfoExtended = {
+  station_id: "466920",
+  name: "臺北",
+  county: "臺北市",
+  town: null,
+  latitude: 25.0375,
+  longitude: 121.5148,
+  altitude: 6.3,
+  has_statistics: true,
+};
+
+// localStorage key
+const STATION_STORAGE_KEY = "auspicious_selected_station";
 
 export default function Home() {
   const [data, setData] = useState<DailyWeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentStation, setCurrentStation] =
+    useState<StationInfoExtended | null>(null);
+  const [distance, setDistance] = useState<number | null>(null);
 
+  // 從 localStorage 讀取上次選擇的站點
   useEffect(() => {
+    const savedStation = localStorage.getItem(STATION_STORAGE_KEY);
+    if (savedStation) {
+      try {
+        const parsed = JSON.parse(savedStation);
+        setCurrentStation(parsed);
+      } catch {
+        setCurrentStation(DEFAULT_STATION);
+      }
+    } else {
+      setCurrentStation(DEFAULT_STATION);
+    }
+  }, []);
+
+  // 載入天氣資料
+  useEffect(() => {
+    if (!currentStation) return;
+
     async function loadTodayWeather() {
       try {
         setLoading(true);
         setError(null);
-        const weatherData = await fetchTodayWeather(DEFAULT_STATION_ID);
+        const weatherData = await fetchTodayWeather(currentStation!.station_id);
         setData(weatherData);
       } catch (err) {
         if (err instanceof ApiError) {
@@ -39,17 +74,40 @@ export default function Home() {
     }
 
     loadTodayWeather();
-  }, []);
+  }, [currentStation]);
+
+  // 處理站點變更
+  const handleStationChange = useCallback(
+    (station: StationInfoExtended, dist?: number) => {
+      setCurrentStation(station);
+      setDistance(dist ?? null);
+      // 儲存到 localStorage
+      localStorage.setItem(STATION_STORAGE_KEY, JSON.stringify(station));
+    },
+    []
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-100 to-white">
       {/* 頁首 */}
       <header className="py-8 text-center">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">好日子</h1>
-        <p className="text-gray-600">
-          歷史氣象大數據 × 傳統曆法智慧
-        </p>
+        <p className="text-gray-600">歷史氣象大數據 x 傳統曆法智慧</p>
       </header>
+
+      {/* 站點選擇器 */}
+      <div className="flex flex-col items-center px-4 mb-6">
+        <StationSelector
+          currentStation={currentStation}
+          onStationChange={handleStationChange}
+        />
+        {/* 距離顯示 */}
+        {distance !== null && (
+          <p className="mt-2 text-sm text-gray-500">
+            距離您 {distance.toFixed(1)} 公里
+          </p>
+        )}
+      </div>
 
       {/* 主內容 */}
       <div className="flex flex-col items-center justify-center px-4 pb-12">
@@ -64,7 +122,7 @@ export default function Home() {
         {/* 錯誤狀態 */}
         {error && !loading && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md w-full text-center">
-            <div className="text-red-500 text-4xl mb-3">⚠️</div>
+            <div className="text-red-500 text-4xl mb-3">!</div>
             <h2 className="text-red-700 font-medium mb-2">無法載入資料</h2>
             <p className="text-red-600 text-sm mb-4">{error}</p>
             <button
@@ -77,9 +135,7 @@ export default function Home() {
         )}
 
         {/* 天氣卡片 */}
-        {data && !loading && !error && (
-          <WeatherCard data={data} />
-        )}
+        {data && !loading && !error && <WeatherCard data={data} />}
 
         {/* 說明文字 */}
         <div className="mt-8 max-w-md text-center text-gray-500 text-sm">

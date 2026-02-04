@@ -9,6 +9,8 @@ import {
   ApiError,
   DailyWeatherData,
   StationInfo,
+  StationInfoExtended,
+  NearestStationResponse,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -130,6 +132,66 @@ export async function fetchStation(
   );
 
   return handleResponse<StationInfo>(response);
+}
+
+/**
+ * 取得所有站點（擴展版）
+ * 支援依據縣市和是否有統計資料進行過濾
+ *
+ * @param options - 過濾選項
+ * @returns 站點詳細資訊陣列
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const stations = await fetchStationsExtended({ hasStatistics: true });
+ * stations.forEach(s => console.log(s.name, s.county));
+ */
+export async function fetchStationsExtended(options?: {
+  county?: string;
+  hasStatistics?: boolean;
+}): Promise<StationInfoExtended[]> {
+  const params = new URLSearchParams();
+  if (options?.county) params.set("county", options.county);
+  if (options?.hasStatistics !== undefined) {
+    params.set("has_statistics", String(options.hasStatistics));
+  }
+
+  const url = `${API_BASE_URL}/api/v1/stations/${params.toString() ? "?" + params.toString() : ""}`;
+  const response = await fetch(url);
+
+  return handleResponse<StationInfoExtended[]>(response);
+}
+
+/**
+ * 取得最近站點
+ * 根據 GPS 座標找到最近的氣象站
+ *
+ * @param latitude - 緯度
+ * @param longitude - 經度
+ * @param hasStatistics - 是否僅搜尋有統計資料的站點（預設 true）
+ * @returns 最近站點資訊及距離
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await fetchNearestStation(25.0330, 121.5654);
+ * console.log(result.station.name, result.distance_km);
+ */
+export async function fetchNearestStation(
+  latitude: number,
+  longitude: number,
+  hasStatistics: boolean = true
+): Promise<NearestStationResponse> {
+  const params = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    has_statistics: String(hasStatistics),
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/stations/nearest?${params.toString()}`
+  );
+
+  return handleResponse<NearestStationResponse>(response);
 }
 
 // ============================================

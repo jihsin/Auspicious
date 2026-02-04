@@ -105,3 +105,35 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+
+// ============================================
+// 站點相關型別（擴展）
+// ============================================
+
+export interface StationInfoExtended {
+  station_id: string;
+  name: string;
+  county: string | null;
+  town: string | null;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  has_statistics: boolean;
+}
+
+export interface NearestStationResponse {
+  station: StationInfoExtended;
+  distance_km: number;
+}
+
+// ============================================
+// GPS 定位相關型別
+// ============================================
+
+export interface GeoLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}
+
+export type LocationStatus = "idle" | "loading" | "success" | "error" | "denied";
