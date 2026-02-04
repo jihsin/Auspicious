@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
+from app.api.v1 import weather, stations
 
 app = FastAPI(
     title="好日子 API",
@@ -31,3 +32,16 @@ async def startup():
 async def health_check():
     """健康檢查端點"""
     return {"status": "ok", "version": "0.1.0"}
+
+
+# 註冊 API 路由
+app.include_router(
+    weather.router,
+    prefix="/api/v1/weather",
+    tags=["weather"]
+)
+app.include_router(
+    stations.router,
+    prefix="/api/v1/stations",
+    tags=["stations"]
+)

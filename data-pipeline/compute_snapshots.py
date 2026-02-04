@@ -122,12 +122,13 @@ def compute_and_save_statistics(
         stats = analyzer.get_date_range_stats(month, day, window_days=3)
 
         # 建立記錄
+        # 注意：確保使用 Python 原生整數，避免 numpy 整數造成 SQLite 儲存問題
         record = DailyStatistics(
             station_id=station_id,
             month_day=f"{month:02d}-{day:02d}",
-            years_analyzed=end_year - start_year + 1,
-            start_year=start_year,
-            end_year=end_year,
+            years_analyzed=int(end_year - start_year + 1),
+            start_year=int(start_year),
+            end_year=int(end_year),
         )
 
         # 溫度統計
