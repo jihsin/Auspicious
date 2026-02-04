@@ -9,6 +9,11 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# 專案根目錄（backend 的上一層）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 class Settings(BaseSettings):
     """應用程式設定類別
 
@@ -21,8 +26,8 @@ class Settings(BaseSettings):
 
     app_name: str = "好日子 API"
     debug: bool = True
-    database_url: str = "sqlite:///./data/auspicious.db"
-    data_dir: Path = Path("./data")
+    database_url: str = f"sqlite:///{DATA_DIR / 'auspicious.db'}"
+    data_dir: Path = DATA_DIR
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,7 +1,10 @@
+# backend/app/main.py
 """FastAPI 應用程式入口"""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.database import init_db
 
 app = FastAPI(
     title="好日子 API",
@@ -16,6 +19,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup():
+    """應用程式啟動時初始化資料庫"""
+    init_db()
 
 
 @app.get("/health")
