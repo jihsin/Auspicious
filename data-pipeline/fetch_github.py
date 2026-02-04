@@ -22,7 +22,7 @@ def build_csv_url(station_id: str, year: int) -> str:
     Returns:
         完整的 CSV 下載 URL
     """
-    return f"{GITHUB_BASE_URL}/{station_id}/{station_id}-{year}.csv"
+    return f"{GITHUB_BASE_URL}/{station_id}/{station_id}_{year}.csv"
 
 
 def download_csv(station_id: str, year: int, output_dir: Path) -> Optional[Path]:
@@ -38,19 +38,19 @@ def download_csv(station_id: str, year: int, output_dir: Path) -> Optional[Path]
         下載後的檔案路徑，失敗時返回 None
     """
     url = build_csv_url(station_id, year)
-    output_path = output_dir / f"{station_id}-{year}.csv"
+    output_path = output_dir / f"{station_id}_{year}.csv"
 
     try:
         response = httpx.get(url, timeout=30.0)
         response.raise_for_status()
 
         output_path.write_bytes(response.content)
-        print(f"✓ Downloaded: {station_id}-{year}.csv")
+        print(f"✓ Downloaded: {station_id}_{year}.csv")
         return output_path
 
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
-            print(f"✗ Not found: {station_id}-{year}.csv")
+            print(f"✗ Not found: {station_id}_{year}.csv")
         else:
             print(f"✗ Error downloading {year}: {e}")
         return None
