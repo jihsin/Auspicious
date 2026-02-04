@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.api.v1 import weather, stations
+from app.api.v1 import weather, stations, lunar
 
 app = FastAPI(
     title="好日子 API",
@@ -44,4 +44,9 @@ app.include_router(
     stations.router,
     prefix="/api/v1/stations",
     tags=["stations"]
+)
+app.include_router(
+    lunar.router,
+    prefix="/api/v1/lunar",
+    tags=["lunar"]
 )
