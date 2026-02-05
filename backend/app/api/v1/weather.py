@@ -75,7 +75,18 @@ def _get_lunar_info_for_date(month_day: str) -> dict:
     """
     today = datetime.now()
     month, day = map(int, month_day.split("-"))
-    query_date = date(today.year, month, day)
+
+    # 處理閏年問題：先用當年，如果失敗則用閏年 2000
+    try:
+        query_date = date(today.year, month, day)
+    except ValueError:
+        # 例如 02-29 在非閏年，改用閏年 2000
+        try:
+            query_date = date(2000, month, day)
+        except ValueError:
+            # 無效日期（如 02-30, 02-31），返回 None
+            return None
+
     return get_lunar_info(query_date)
 
 
