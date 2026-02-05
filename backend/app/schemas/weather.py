@@ -6,6 +6,8 @@ from typing import Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.lunar import LunarDateInfo, YiJiInfo
+
 T = TypeVar("T")
 
 
@@ -108,6 +110,10 @@ class DailyWeatherResponse(BaseModel):
     precipitation: PrecipitationResponse = Field(..., description="降水統計")
     tendency: WeatherTendencyResponse = Field(..., description="天氣傾向")
     computed_at: datetime = Field(..., description="統計計算時間")
+    # 農曆資訊
+    lunar_date: Optional[LunarDateInfo] = Field(None, description="農曆日期資訊")
+    yi_ji: Optional[YiJiInfo] = Field(None, description="宜忌資訊")
+    jieqi: Optional[str] = Field(None, description="當日節氣（如有）")
 
     class Config:
         json_schema_extra = {
@@ -145,7 +151,25 @@ class DailyWeatherResponse(BaseModel):
                     "cloudy": 0.35,
                     "rainy": 0.25
                 },
-                "computed_at": "2025-01-01T00:00:00"
+                "computed_at": "2025-01-01T00:00:00",
+                "lunar_date": {
+                    "year": 2025,
+                    "month": 1,
+                    "day": 7,
+                    "year_cn": "二零二五年",
+                    "month_cn": "正月",
+                    "day_cn": "初七",
+                    "ganzhi_year": "乙巳",
+                    "ganzhi_month": "戊寅",
+                    "ganzhi_day": "甲子",
+                    "zodiac": "蛇",
+                    "is_leap": False
+                },
+                "yi_ji": {
+                    "yi": ["祭祀", "祈福"],
+                    "ji": ["動土", "破土"]
+                },
+                "jieqi": "立春"
             }
         }
 

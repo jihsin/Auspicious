@@ -1,7 +1,7 @@
 # backend/app/api/v1/weather.py
 """天氣查詢 API 路由"""
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path
@@ -20,6 +20,8 @@ from app.schemas.weather import (
     TemperatureStats,
     WeatherTendencyResponse,
 )
+from app.schemas.lunar import LunarDateInfo, YiJiInfo
+from app.services.lunar import get_lunar_info
 
 # 觀測站資訊對照表
 STATION_INFO = {
@@ -49,11 +51,46 @@ def _get_station_info(station_id: str) -> StationInfo:
     )
 
 
+def _get_lunar_info_for_date(month_day: str) -> dict:
+    """取得指定日期的農曆資訊
+
+    Args:
+        month_day: MM-DD 格式的日期
+
+    Returns:
+        農曆資訊字典，包含 lunar_date, yi_ji, jieqi
+    """
+    today = datetime.now()
+    month, day = map(int, month_day.split("-"))
+    query_date = date(today.year, month, day)
+    return get_lunar_info(query_date)
+
+
 def _statistics_to_response(
     stats: DailyStatistics,
-    station_info: StationInfo
+    station_info: StationInfo,
+    lunar_info: Optional[dict] = None
 ) -> DailyWeatherResponse:
-    """將資料庫模型轉換為 API 回應"""
+    """將資料庫模型轉換為 API 回應
+
+    Args:
+        stats: 資料庫統計模型
+        station_info: 站點資訊
+        lunar_info: 農曆資訊（可選）
+
+    Returns:
+        API 回應物件
+    """
+    # 處理農曆資訊
+    lunar_date = None
+    yi_ji = None
+    jieqi = None
+
+    if lunar_info:
+        lunar_date = LunarDateInfo(**lunar_info["lunar_date"])
+        yi_ji = YiJiInfo(**lunar_info["yi_ji"])
+        jieqi = lunar_info.get("jieqi")
+
     return DailyWeatherResponse(
         station=station_info,
         month_day=stats.month_day,
@@ -84,7 +121,10 @@ def _statistics_to_response(
             cloudy=stats.tendency_cloudy,
             rainy=stats.tendency_rainy
         ),
-        computed_at=stats.computed_at
+        computed_at=stats.computed_at,
+        lunar_date=lunar_date,
+        yi_ji=yi_ji,
+        jieqi=jieqi
     )
 
 
@@ -145,9 +185,12 @@ async def get_daily_statistics(
             detail=f"找不到 {station_info.name} 站 {month_day} 的統計資料"
         )
 
+    # 取得農曆資訊
+    lunar_info = _get_lunar_info_for_date(month_day)
+
     return ApiResponse(
         success=True,
-        data=_statistics_to_response(stats, station_info)
+        data=_statistics_to_response(stats, station_info, lunar_info)
     )
 
 
@@ -194,7 +237,10 @@ async def get_today_statistics(
             detail=f"找不到 {station_info.name} 站 {month_day} 的統計資料"
         )
 
+    # 取得農曆資訊
+    lunar_info = _get_lunar_info_for_date(month_day)
+
     return ApiResponse(
         success=True,
-        data=_statistics_to_response(stats, station_info)
+        data=_statistics_to_response(stats, station_info, lunar_info)
     )
