@@ -63,24 +63,55 @@ class RealtimeWeatherData:
         }
 
 
-def parse_weather_element(elements: list, name: str) -> Optional[float]:
-    """從天氣元素列表中解析指定元素的值
+def parse_weather_element(elements: dict, name: str) -> Optional[float]:
+    """從天氣元素物件中解析指定元素的值
 
     Args:
-        elements: CWA API 返回的 WeatherElement 列表
+        elements: CWA API 返回的 WeatherElement 物件
         name: 元素名稱
 
     Returns:
         元素值（float），如果找不到或無效則返回 None
     """
-    for elem in elements:
-        if elem.get("ElementName") == name:
-            value = elem.get("ElementValue")
-            if value is not None and value != "-99" and value != "-99.0":
-                try:
-                    return float(value)
-                except (ValueError, TypeError):
-                    return None
+    value = elements.get(name)
+    if value is None:
+        return None
+
+    # 處理嵌套結構
+    if isinstance(value, dict):
+        # 如 Now.Precipitation
+        if "Precipitation" in value:
+            value = value.get("Precipitation")
+        else:
+            return None
+
+    if value is not None and str(value) not in ["-99", "-99.0", ""]:
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def parse_daily_extreme(elements: dict, extreme_type: str) -> Optional[float]:
+    """從 DailyExtreme 中解析最高/最低溫度
+
+    Args:
+        elements: CWA API 返回的 WeatherElement 物件
+        extreme_type: "DailyHigh" 或 "DailyLow"
+
+    Returns:
+        溫度值，如果找不到則返回 None
+    """
+    try:
+        daily_extreme = elements.get("DailyExtreme", {})
+        extreme_data = daily_extreme.get(extreme_type, {})
+        temp_info = extreme_data.get("TemperatureInfo", {})
+        value = temp_info.get("AirTemperature")
+        if value and str(value) not in ["-99", "-99.0"]:
+            return float(value)
+    except (ValueError, TypeError, AttributeError):
+        pass
     return None
 
 
@@ -113,14 +144,10 @@ async def fetch_realtime_weather(station_id: str) -> Optional[RealtimeWeatherDat
         obs_time_str = station.get("ObsTime", {}).get("DateTime")
         obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now()
 
-        elements = station.get("WeatherElement", [])
+        elements = station.get("WeatherElement", {})
 
-        # 天氣描述
-        weather = None
-        for elem in elements:
-            if elem.get("ElementName") == "Weather":
-                weather = elem.get("ElementValue")
-                break
+        # 天氣描述（直接從物件取得）
+        weather = elements.get("Weather")
 
         return RealtimeWeatherData(
             station_id=station.get("StationId"),
@@ -128,8 +155,8 @@ async def fetch_realtime_weather(station_id: str) -> Optional[RealtimeWeatherDat
             obs_time=obs_time,
             weather=weather,
             temp=parse_weather_element(elements, "AirTemperature"),
-            temp_max=parse_weather_element(elements, "DailyHigh"),
-            temp_min=parse_weather_element(elements, "DailyLow"),
+            temp_max=parse_daily_extreme(elements, "DailyHigh"),
+            temp_min=parse_daily_extreme(elements, "DailyLow"),
             humidity=parse_weather_element(elements, "RelativeHumidity"),
             wind_speed=parse_weather_element(elements, "WindSpeed"),
             precipitation=parse_weather_element(elements, "Now"),  # 當日累積雨量
@@ -165,13 +192,8 @@ async def fetch_all_realtime_weather() -> list[RealtimeWeatherData]:
             obs_time_str = station.get("ObsTime", {}).get("DateTime")
             obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now()
 
-            elements = station.get("WeatherElement", [])
-
-            weather = None
-            for elem in elements:
-                if elem.get("ElementName") == "Weather":
-                    weather = elem.get("ElementValue")
-                    break
+            elements = station.get("WeatherElement", {})
+            weather = elements.get("Weather")
 
             results.append(RealtimeWeatherData(
                 station_id=station.get("StationId"),
@@ -179,8 +201,8 @@ async def fetch_all_realtime_weather() -> list[RealtimeWeatherData]:
                 obs_time=obs_time,
                 weather=weather,
                 temp=parse_weather_element(elements, "AirTemperature"),
-                temp_max=parse_weather_element(elements, "DailyHigh"),
-                temp_min=parse_weather_element(elements, "DailyLow"),
+                temp_max=parse_daily_extreme(elements, "DailyHigh"),
+                temp_min=parse_daily_extreme(elements, "DailyLow"),
                 humidity=parse_weather_element(elements, "RelativeHumidity"),
                 wind_speed=parse_weather_element(elements, "WindSpeed"),
                 precipitation=parse_weather_element(elements, "Now"),
