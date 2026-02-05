@@ -13,11 +13,13 @@ from app.models.station import Station
 from app.schemas.weather import (
     ApiResponse,
     AnalysisPeriod,
+    BestDatesResponse,
     DailyWeatherResponse,
     DailyWeatherSummary,
     DateRangeResponse,
     PrecipitationResponse,
     RangeSummary,
+    RecommendedDate,
     StationInfo,
     TemperatureRecord,
     TemperatureResponse,
@@ -419,5 +421,199 @@ async def get_range_statistics(
             end_date=end,
             days=days,
             summary=range_summary
+        )
+    )
+
+
+def _calculate_recommendation_score(
+    stats: DailyStatistics,
+    preference: str
+) -> tuple[float, str]:
+    """計算推薦分數
+
+    Args:
+        stats: 統計資料
+        preference: 偏好類型 (sunny, mild, cool, outdoor, wedding)
+
+    Returns:
+        (分數, 推薦理由)
+    """
+    score = 50.0  # 基礎分數
+    reasons = []
+
+    sunny_rate = stats.tendency_sunny or 0
+    precip_prob = stats.precip_probability or 0
+    temp_avg = stats.temp_avg_mean or 20
+
+    if preference == "sunny":
+        # 戶外活動：重視晴天率和低降雨機率
+        score += sunny_rate * 40  # 晴天率貢獻 0-40 分
+        score -= precip_prob * 30  # 降雨機率扣 0-30 分
+        if sunny_rate > 0.5:
+            reasons.append("晴天機率高")
+        if precip_prob < 0.3:
+            reasons.append("降雨機率低")
+
+    elif preference == "mild":
+        # 舒適氣溫：18-25°C 最佳
+        temp_score = 30 - abs(temp_avg - 22) * 3
+        score += max(0, temp_score)
+        score += sunny_rate * 20
+        score -= precip_prob * 20
+        if 18 <= temp_avg <= 25:
+            reasons.append("氣溫舒適")
+        if precip_prob < 0.4:
+            reasons.append("降雨機率適中")
+
+    elif preference == "cool":
+        # 涼爽：15-20°C 最佳
+        temp_score = 30 - abs(temp_avg - 17) * 3
+        score += max(0, temp_score)
+        score -= precip_prob * 20
+        if 15 <= temp_avg <= 20:
+            reasons.append("氣溫涼爽宜人")
+
+    elif preference == "outdoor":
+        # 戶外活動綜合：晴天 + 適溫 + 少雨
+        score += sunny_rate * 30
+        score -= precip_prob * 25
+        temp_score = 20 - abs(temp_avg - 22) * 2
+        score += max(0, temp_score)
+        if sunny_rate > 0.4 and precip_prob < 0.4:
+            reasons.append("適合戶外活動")
+
+    elif preference == "wedding":
+        # 婚禮：最重視少雨 + 適溫
+        score -= precip_prob * 40  # 最重視不下雨
+        score += sunny_rate * 25
+        temp_score = 20 - abs(temp_avg - 23) * 2
+        score += max(0, temp_score)
+        if precip_prob < 0.3:
+            reasons.append("降雨機率低")
+        if 20 <= temp_avg <= 26:
+            reasons.append("氣溫適宜")
+
+    # 確保分數在 0-100 範圍內
+    score = max(0, min(100, score))
+
+    # 生成理由
+    if not reasons:
+        if score >= 70:
+            reasons.append("整體條件良好")
+        elif score >= 50:
+            reasons.append("條件尚可")
+        else:
+            reasons.append("條件一般")
+
+    return round(score, 1), "、".join(reasons)
+
+
+@router.get(
+    "/recommend/{station_id}",
+    response_model=ApiResponse[BestDatesResponse],
+    summary="推薦最佳日期",
+    description="根據站點和偏好推薦指定月份的最佳日期"
+)
+async def get_best_dates(
+    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    month: int = Query(..., ge=1, le=12, description="月份 (1-12)", example=3),
+    preference: str = Query(
+        "sunny",
+        description="偏好類型: sunny(晴天), mild(溫和), cool(涼爽), outdoor(戶外), wedding(婚禮)",
+        example="sunny"
+    ),
+    limit: int = Query(5, ge=1, le=10, description="推薦數量 (1-10)", example=5),
+    db: Session = Depends(get_db)
+) -> ApiResponse[BestDatesResponse]:
+    """推薦最佳日期
+
+    根據歷史天氣統計和用戶偏好，推薦指定月份的最佳日期。
+
+    偏好類型：
+    - sunny: 戶外活動，重視晴天率
+    - mild: 舒適溫度 (18-25°C)
+    - cool: 涼爽天氣 (15-20°C)
+    - outdoor: 戶外活動綜合評估
+    - wedding: 婚禮宴客，重視少雨
+    """
+    # 驗證偏好類型
+    valid_preferences = ["sunny", "mild", "cool", "outdoor", "wedding"]
+    if preference not in valid_preferences:
+        raise HTTPException(
+            status_code=400,
+            detail=f"無效的偏好類型: {preference}，有效選項: {', '.join(valid_preferences)}"
+        )
+
+    # 驗證站點
+    station_info = _get_station_info(station_id, db)
+
+    # 產生該月所有日期
+    month_str = f"{month:02d}"
+    # 取得該月天數
+    if month in [1, 3, 5, 7, 8, 10, 12]:
+        days_in_month = 31
+    elif month in [4, 6, 9, 11]:
+        days_in_month = 30
+    else:  # 二月
+        days_in_month = 29  # 包含閏年
+
+    month_days = [f"{month_str}-{d:02d}" for d in range(1, days_in_month + 1)]
+
+    # 查詢該月所有統計資料
+    stats_list = db.query(DailyStatistics).filter(
+        DailyStatistics.station_id == station_id,
+        DailyStatistics.month_day.in_(month_days)
+    ).all()
+
+    if not stats_list:
+        raise HTTPException(
+            status_code=404,
+            detail=f"找不到 {station_info.name} 站 {month} 月的統計資料"
+        )
+
+    # 計算每日推薦分數
+    scored_days = []
+    for stats in stats_list:
+        score, reason = _calculate_recommendation_score(stats, preference)
+
+        # 取得農曆資訊
+        lunar_info = _get_lunar_info_for_date(stats.month_day)
+        lunar_date = LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None
+        jieqi = lunar_info.get("jieqi") if lunar_info else None
+
+        scored_days.append({
+            "stats": stats,
+            "score": score,
+            "reason": reason,
+            "lunar_date": lunar_date,
+            "jieqi": jieqi
+        })
+
+    # 按分數排序，取前 N 個
+    scored_days.sort(key=lambda x: x["score"], reverse=True)
+    top_days = scored_days[:limit]
+
+    # 組裝推薦結果
+    recommendations = [
+        RecommendedDate(
+            month_day=d["stats"].month_day,
+            score=d["score"],
+            reason=d["reason"],
+            temp_avg=d["stats"].temp_avg_mean,
+            precip_prob=d["stats"].precip_probability,
+            sunny_rate=d["stats"].tendency_sunny,
+            lunar_date=d["lunar_date"],
+            jieqi=d["jieqi"]
+        )
+        for d in top_days
+    ]
+
+    return ApiResponse(
+        success=True,
+        data=BestDatesResponse(
+            station=station_info,
+            month=month,
+            preference=preference,
+            recommendations=recommendations
         )
     )
