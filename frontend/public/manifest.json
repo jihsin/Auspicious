@@ -1,0 +1,20 @@
+{
+  "name": "好日子 - 歷史天氣統計",
+  "short_name": "好日子",
+  "description": "根據歷史氣象資料，找出最適合的好日子",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["weather", "lifestyle", "utilities"],
+  "lang": "zh-TW"
+}
