@@ -35,6 +35,7 @@ class AIStatusResponse(BaseModel):
     """AI 狀態回應"""
     available: bool = Field(..., description="AI 服務是否可用")
     model: str = Field(..., description="使用的模型")
+    provider: str = Field(default="Vertex AI", description="AI 提供者")
     message: str = Field(..., description="狀態訊息")
 
 
@@ -100,7 +101,8 @@ async def check_status():
         data=AIStatusResponse(
             available=available,
             model="gemini-2.0-flash" if available else "N/A",
-            message="AI 服務正常運作" if available else "AI 服務不可用（未設定 GEMINI_API_KEY）"
+            provider="Google AI Studio",
+            message="AI 服務正常運作" if available else "AI 服務不可用（未設定 GEMINI_API_KEY 或配額已用完）"
         )
     )
 
@@ -120,7 +122,7 @@ async def get_solar_term_insight(
     if not is_ai_available():
         return ApiResponse(
             success=False,
-            error="AI 服務不可用，請設定 GEMINI_API_KEY"
+            error="AI 服務不可用"
         )
 
     # 取得節氣資訊
@@ -197,7 +199,7 @@ async def get_proverb_insight(
     if not is_ai_available():
         return ApiResponse(
             success=False,
-            error="AI 服務不可用，請設定 GEMINI_API_KEY"
+            error="AI 服務不可用"
         )
 
     # 取得諺語資訊
@@ -279,7 +281,7 @@ async def get_activity_suggestion(
     if not is_ai_available():
         return ApiResponse(
             success=False,
-            error="AI 服務不可用，請設定 GEMINI_API_KEY"
+            error="AI 服務不可用"
         )
 
     # 解析日期
@@ -375,7 +377,7 @@ async def get_daily_insight(
     if not is_ai_available():
         return ApiResponse(
             success=False,
-            error="AI 服務不可用，請設定 GEMINI_API_KEY"
+            error="AI 服務不可用"
         )
 
     # 解析日期

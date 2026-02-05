@@ -12,13 +12,10 @@ import os
 from datetime import date
 from typing import Optional
 from dataclasses import dataclass
-from functools import lru_cache
 import json
 
 import google.generativeai as genai
 from google.generativeai.types import GenerateContentResponse
-
-from app.config import settings
 
 
 # ============================================
@@ -29,7 +26,7 @@ from app.config import settings
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # 模型配置
-MODEL_NAME = "gemini-2.0-flash"  # 使用最新的 Flash 模型（快速且便宜）
+MODEL_NAME = "gemini-2.0-flash"  # 使用 Flash 模型
 
 # 生成配置
 GENERATION_CONFIG = {
@@ -39,7 +36,7 @@ GENERATION_CONFIG = {
     "max_output_tokens": 1024,
 }
 
-# 安全設定（調整為較寬鬆）
+# 安全設定
 SAFETY_SETTINGS = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
@@ -76,7 +73,6 @@ def _init_model() -> Optional[genai.GenerativeModel]:
         return None
 
 
-# 延遲初始化模型
 _model: Optional[genai.GenerativeModel] = None
 
 
@@ -284,17 +280,7 @@ def generate_solar_term_insight(
     current_weather: Optional[dict] = None,
     historical_avg: Optional[dict] = None,
 ) -> Optional[AIResponse]:
-    """生成節氣深度解讀
-
-    Args:
-        term_name: 節氣名稱
-        term_info: 節氣資訊字典
-        current_weather: 當前天氣（可選）
-        historical_avg: 歷史平均（可選）
-
-    Returns:
-        AIResponse 或 None（如果 AI 不可用）
-    """
+    """生成節氣深度解讀"""
     model = get_model()
     if not model:
         return None
@@ -322,16 +308,7 @@ def generate_proverb_insight(
     proverb_info: dict,
     verification_result: Optional[dict] = None,
 ) -> Optional[AIResponse]:
-    """生成諺語科學解讀
-
-    Args:
-        proverb_text: 諺語原文
-        proverb_info: 諺語資訊字典
-        verification_result: 驗證結果（可選）
-
-    Returns:
-        AIResponse 或 None
-    """
+    """生成諺語科學解讀"""
     model = get_model()
     if not model:
         return None
@@ -361,18 +338,7 @@ def generate_activity_suggestion(
     weather_info: dict,
     historical_stats: dict,
 ) -> Optional[AIResponse]:
-    """生成活動建議
-
-    Args:
-        activity_type: 活動類型（如：婚禮、野餐、登山）
-        location: 地點
-        target_date: 目標日期
-        weather_info: 天氣資訊
-        historical_stats: 歷史統計
-
-    Returns:
-        AIResponse 或 None
-    """
+    """生成活動建議"""
     model = get_model()
     if not model:
         return None
@@ -405,18 +371,7 @@ def generate_daily_insight(
     weather_stats: dict,
     climate_trend: Optional[dict] = None,
 ) -> Optional[AIResponse]:
-    """生成每日洞察
-
-    Args:
-        target_date: 目標日期
-        lunar_info: 農曆資訊
-        solar_term_info: 節氣資訊（可選）
-        weather_stats: 天氣統計
-        climate_trend: 氣候趨勢（可選）
-
-    Returns:
-        AIResponse 或 None
-    """
+    """生成每日洞察"""
     model = get_model()
     if not model:
         return None
@@ -443,14 +398,7 @@ def generate_daily_insight(
 
 
 def parse_json_response(response: AIResponse) -> Optional[dict]:
-    """解析 JSON 格式的 AI 回應
-
-    Args:
-        response: AI 回應
-
-    Returns:
-        解析後的字典，或 None（解析失敗時）
-    """
+    """解析 JSON 格式的 AI 回應"""
     if not response or not response.content:
         return None
 
@@ -469,14 +417,11 @@ def parse_json_response(response: AIResponse) -> Optional[dict]:
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        # 嘗試修復常見問題
         try:
-            # 有時 AI 會回傳多行 JSON
             lines = [line for line in content.split('\n') if line.strip()]
             for i, line in enumerate(lines):
                 if line.strip().startswith('{'):
                     json_str = '\n'.join(lines[i:])
-                    # 找到 } 結尾
                     brace_count = 0
                     end_idx = 0
                     for j, char in enumerate(json_str):
