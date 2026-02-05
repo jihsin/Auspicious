@@ -219,3 +219,26 @@ export interface BestDatesResponse {
 }
 
 export type PreferenceType = "sunny" | "mild" | "cool" | "outdoor" | "wedding";
+
+// ============================================
+// 多站點比較相關型別
+// ============================================
+
+export interface StationWeatherComparison {
+  station: StationInfo;
+  temp_avg: number | null;
+  temp_max: number | null;
+  temp_min: number | null;
+  precip_prob: number | null;
+  sunny_rate: number | null;
+  years_analyzed: number | null;
+  rank: number | null;
+}
+
+export interface CompareResponse {
+  date: string;
+  stations: StationWeatherComparison[];
+  best_station: string | null;
+  lunar_date?: LunarDateInfo;
+  jieqi?: string | null;
+}

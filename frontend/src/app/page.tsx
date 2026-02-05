@@ -157,6 +157,13 @@ export default function Home() {
             <span className="text-xl">🔮</span>
             <span className="font-medium">好日子推薦</span>
           </Link>
+          <Link
+            href="/compare"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">🗺️</span>
+            <span className="font-medium">多站點比較</span>
+          </Link>
         </div>
 
         {/* 說明文字 */}

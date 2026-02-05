@@ -230,6 +230,29 @@ class BestDatesResponse(BaseModel):
     recommendations: list[RecommendedDate] = Field(..., description="推薦日期列表")
 
 
+class StationWeatherComparison(BaseModel):
+    """站點天氣比較資料"""
+
+    station: StationInfo = Field(..., description="站點資訊")
+    temp_avg: Optional[float] = Field(None, description="平均溫度 (°C)")
+    temp_max: Optional[float] = Field(None, description="最高溫平均 (°C)")
+    temp_min: Optional[float] = Field(None, description="最低溫平均 (°C)")
+    precip_prob: Optional[float] = Field(None, ge=0, le=1, description="降雨機率")
+    sunny_rate: Optional[float] = Field(None, ge=0, le=1, description="晴天率")
+    years_analyzed: Optional[int] = Field(None, description="分析年數")
+    rank: Optional[int] = Field(None, description="綜合排名 (晴天率優先)")
+
+
+class CompareResponse(BaseModel):
+    """多站點比較回應"""
+
+    date: str = Field(..., pattern=r"^\d{2}-\d{2}$", description="比較日期 (MM-DD)")
+    stations: list[StationWeatherComparison] = Field(..., description="站點天氣比較列表")
+    best_station: Optional[str] = Field(None, description="最佳站點 ID (晴天率最高)")
+    lunar_date: Optional[LunarDateInfo] = Field(None, description="農曆日期")
+    jieqi: Optional[str] = Field(None, description="節氣")
+
+
 class ApiResponse(BaseModel, Generic[T]):
     """API 回應包裝"""
 

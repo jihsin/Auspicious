@@ -14,6 +14,7 @@ import {
   DateRangeResponse,
   BestDatesResponse,
   PreferenceType,
+  CompareResponse,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -318,4 +319,36 @@ export async function fetchBestDates(
   );
 
   return handleResponse<BestDatesResponse>(response);
+}
+
+// ============================================
+// 多站點比較 API
+// ============================================
+
+/**
+ * 比較多個站點在指定日期的天氣統計
+ *
+ * @param stationIds - 站點代碼陣列 (2-5 個)
+ * @param date - 比較日期 (MM-DD)
+ * @returns 多站點天氣比較結果
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await fetchCompareStations(["466920", "467490", "467440"], "03-15");
+ * console.log(result.best_station); // 晴天率最高的站點
+ */
+export async function fetchCompareStations(
+  stationIds: string[],
+  date: string
+): Promise<CompareResponse> {
+  const params = new URLSearchParams({
+    stations: stationIds.join(","),
+    date,
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/weather/compare?${params.toString()}`
+  );
+
+  return handleResponse<CompareResponse>(response);
 }

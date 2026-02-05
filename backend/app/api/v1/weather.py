@@ -14,6 +14,7 @@ from app.schemas.weather import (
     ApiResponse,
     AnalysisPeriod,
     BestDatesResponse,
+    CompareResponse,
     DailyWeatherResponse,
     DailyWeatherSummary,
     DateRangeResponse,
@@ -21,6 +22,7 @@ from app.schemas.weather import (
     RangeSummary,
     RecommendedDate,
     StationInfo,
+    StationWeatherComparison,
     TemperatureRecord,
     TemperatureResponse,
     TemperatureStats,
@@ -615,5 +617,134 @@ async def get_best_dates(
             month=month,
             preference=preference,
             recommendations=recommendations
+        )
+    )
+
+
+@router.get(
+    "/compare",
+    response_model=ApiResponse[CompareResponse],
+    summary="多站點天氣比較",
+    description="比較多個站點在指定日期的歷史天氣統計"
+)
+async def compare_stations(
+    stations: str = Query(
+        ...,
+        description="站點代碼列表，以逗號分隔 (最多 5 個)",
+        example="466920,467490,467441"
+    ),
+    date: str = Query(
+        ...,
+        pattern=r"^\d{2}-\d{2}$",
+        description="比較日期 (MM-DD 格式)",
+        example="03-15"
+    ),
+    db: Session = Depends(get_db)
+) -> ApiResponse[CompareResponse]:
+    """多站點天氣比較
+
+    比較多個站點在指定日期的歷史天氣統計，並根據晴天率排名。
+
+    Args:
+        stations: 站點代碼列表，以逗號分隔
+        date: 比較日期 (MM-DD)
+        db: 資料庫 session
+
+    Returns:
+        包含多站點天氣比較結果的回應
+    """
+    # 解析站點列表
+    station_ids = [s.strip() for s in stations.split(",") if s.strip()]
+
+    if len(station_ids) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="至少需要 2 個站點進行比較"
+        )
+
+    if len(station_ids) > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="最多只能比較 5 個站點"
+        )
+
+    # 驗證日期格式
+    try:
+        month, day = map(int, date.split("-"))
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            raise ValueError("Invalid date")
+        datetime(2000, month, day)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"無效的日期格式: {date}，請使用 MM-DD 格式"
+        )
+
+    # 查詢所有站點的統計資料
+    comparisons = []
+    valid_station_ids = []
+
+    for station_id in station_ids:
+        # 取得站點資訊
+        station = db.query(Station).filter(Station.station_id == station_id).first()
+        if not station:
+            continue  # 跳過不存在的站點
+
+        # 查詢統計資料
+        stats = db.query(DailyStatistics).filter(
+            DailyStatistics.station_id == station_id,
+            DailyStatistics.month_day == date
+        ).first()
+
+        if not stats:
+            continue  # 跳過沒有統計資料的站點
+
+        valid_station_ids.append(station_id)
+        comparisons.append({
+            "station": StationInfo(
+                station_id=station.station_id,
+                name=station.name,
+                city=station.county or ""
+            ),
+            "temp_avg": stats.temp_avg_mean,
+            "temp_max": stats.temp_max_mean,
+            "temp_min": stats.temp_min_mean,
+            "precip_prob": stats.precip_probability,
+            "sunny_rate": stats.tendency_sunny,
+            "years_analyzed": stats.years_analyzed
+        })
+
+    if len(comparisons) < 2:
+        raise HTTPException(
+            status_code=404,
+            detail="找不到足夠的站點統計資料進行比較"
+        )
+
+    # 按晴天率排序並設定排名
+    comparisons.sort(key=lambda x: x.get("sunny_rate") or 0, reverse=True)
+    for i, comp in enumerate(comparisons):
+        comp["rank"] = i + 1
+
+    # 找出最佳站點
+    best_station = comparisons[0]["station"].station_id if comparisons else None
+
+    # 取得農曆資訊
+    lunar_info = _get_lunar_info_for_date(date)
+    lunar_date = LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None
+    jieqi = lunar_info.get("jieqi") if lunar_info else None
+
+    # 組裝回應
+    station_comparisons = [
+        StationWeatherComparison(**comp) for comp in comparisons
+    ]
+
+    return ApiResponse(
+        success=True,
+        data=CompareResponse(
+            date=date,
+            stations=station_comparisons,
+            best_station=best_station,
+            lunar_date=lunar_date,
+            jieqi=jieqi
         )
     )
