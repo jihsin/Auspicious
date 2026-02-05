@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.statistics import DailyStatistics
+from app.models.station import Station
 from app.schemas.weather import (
     ApiResponse,
     AnalysisPeriod,
@@ -23,31 +24,23 @@ from app.schemas.weather import (
 from app.schemas.lunar import LunarDateInfo, YiJiInfo
 from app.services.lunar import get_lunar_info
 
-# 觀測站資訊對照表
-STATION_INFO = {
-    "466920": {"name": "臺北", "city": "臺北市"},
-    "467490": {"name": "臺中", "city": "臺中市"},
-    "467410": {"name": "臺南", "city": "臺南市"},
-    "467440": {"name": "高雄", "city": "高雄市"},
-    "466990": {"name": "花蓮", "city": "花蓮縣"},
-    "467660": {"name": "臺東", "city": "臺東縣"},
-}
-
 router = APIRouter()
 
 
-def _get_station_info(station_id: str) -> StationInfo:
-    """取得站點資訊"""
-    if station_id not in STATION_INFO:
+def _get_station_info(station_id: str, db: Session) -> StationInfo:
+    """從資料庫取得站點資訊"""
+    station = db.query(Station).filter(Station.station_id == station_id).first()
+
+    if not station:
         raise HTTPException(
             status_code=404,
             detail=f"找不到站點 {station_id}"
         )
-    info = STATION_INFO[station_id]
+
     return StationInfo(
-        station_id=station_id,
-        name=info["name"],
-        city=info["city"]
+        station_id=station.station_id,
+        name=station.name,
+        city=station.county or ""
     )
 
 
@@ -158,7 +151,7 @@ async def get_daily_statistics(
         404: 找不到指定站點或日期的統計資料
     """
     # 驗證站點
-    station_info = _get_station_info(station_id)
+    station_info = _get_station_info(station_id, db)
 
     # 驗證日期格式
     try:
@@ -223,7 +216,7 @@ async def get_today_statistics(
     month_day = today.strftime("%m-%d")
 
     # 驗證站點
-    station_info = _get_station_info(station_id)
+    station_info = _get_station_info(station_id, db)
 
     # 查詢統計資料
     stats = db.query(DailyStatistics).filter(
