@@ -4,7 +4,7 @@
 from datetime import datetime, date
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path
 from pydantic import BaseModel, Field
 
 from app.services.solar_term import (
@@ -148,7 +148,7 @@ async def get_term_by_name(name: str):
     description="取得指定季節的所有節氣"
 )
 async def get_terms_by_season(
-    season: str = Query(..., description="季節 (春/夏/秋/冬)", example="春")
+    season: str = Path(..., description="季節 (春/夏/秋/冬)", example="春")
 ):
     """依季節查詢節氣
 
