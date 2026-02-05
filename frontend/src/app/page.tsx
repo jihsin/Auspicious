@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { WeatherCard, StationSelector, LunarCard } from "@/components";
 import { fetchTodayWeather } from "@/lib/api";
 import { DailyWeatherData, ApiError, StationInfoExtended } from "@/lib/types";
@@ -146,6 +147,17 @@ export default function Home() {
             />
           </div>
         )}
+
+        {/* 功能連結 */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Link
+            href="/recommend"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">🔮</span>
+            <span className="font-medium">好日子推薦</span>
+          </Link>
+        </div>
 
         {/* 說明文字 */}
         <div className="mt-8 max-w-md text-center text-gray-500 text-sm">

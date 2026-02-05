@@ -11,6 +11,9 @@ import {
   StationInfo,
   StationInfoExtended,
   NearestStationResponse,
+  DateRangeResponse,
+  BestDatesResponse,
+  PreferenceType,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -244,4 +247,75 @@ export function getDominantTendency(tendency: {
   );
 
   return dominant[0] as "sunny" | "cloudy" | "rainy";
+}
+
+// ============================================
+// 日期範圍查詢 API
+// ============================================
+
+/**
+ * 查詢日期範圍的歷史天氣統計
+ *
+ * @param stationId - 氣象站代碼
+ * @param startDate - 起始日期 (MM-DD)
+ * @param endDate - 結束日期 (MM-DD)
+ * @returns 範圍內每日統計與摘要
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await fetchDateRange("466920", "03-01", "03-15");
+ * console.log(result.summary.best_day); // 最佳日期
+ */
+export async function fetchDateRange(
+  stationId: string,
+  startDate: string,
+  endDate: string
+): Promise<DateRangeResponse> {
+  const params = new URLSearchParams({
+    start: startDate,
+    end: endDate,
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/weather/range/${stationId}?${params.toString()}`
+  );
+
+  return handleResponse<DateRangeResponse>(response);
+}
+
+// ============================================
+// 最佳日期推薦 API
+// ============================================
+
+/**
+ * 取得最佳日期推薦
+ *
+ * @param stationId - 氣象站代碼
+ * @param month - 月份 (1-12)
+ * @param preference - 偏好類型
+ * @param limit - 推薦數量 (預設 5)
+ * @returns 推薦日期列表
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await fetchBestDates("466920", 4, "wedding", 5);
+ * result.recommendations.forEach(r => console.log(r.month_day, r.score));
+ */
+export async function fetchBestDates(
+  stationId: string,
+  month: number,
+  preference: PreferenceType = "sunny",
+  limit: number = 5
+): Promise<BestDatesResponse> {
+  const params = new URLSearchParams({
+    month: String(month),
+    preference,
+    limit: String(limit),
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/weather/recommend/${stationId}?${params.toString()}`
+  );
+
+  return handleResponse<BestDatesResponse>(response);
 }

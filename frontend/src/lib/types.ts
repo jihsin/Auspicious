@@ -164,3 +164,58 @@ export interface YiJiInfo {
   yi: string[];  // 宜
   ji: string[];  // 忌
 }
+
+// ============================================
+// 日期範圍查詢相關型別
+// ============================================
+
+export interface DailyWeatherSummary {
+  month_day: string;
+  temp_avg: number | null;
+  temp_max: number | null;
+  temp_min: number | null;
+  precip_prob: number | null;
+  sunny_rate: number | null;
+  lunar_date?: LunarDateInfo;
+  jieqi?: string | null;
+}
+
+export interface RangeSummary {
+  avg_temp: number | null;
+  avg_precip_prob: number | null;
+  avg_sunny_rate: number | null;
+  best_day: string | null;
+  worst_day: string | null;
+}
+
+export interface DateRangeResponse {
+  station: StationInfo;
+  start_date: string;
+  end_date: string;
+  days: DailyWeatherSummary[];
+  summary: RangeSummary;
+}
+
+// ============================================
+// 最佳日期推薦相關型別
+// ============================================
+
+export interface RecommendedDate {
+  month_day: string;
+  score: number;
+  reason: string;
+  temp_avg: number | null;
+  precip_prob: number | null;
+  sunny_rate: number | null;
+  lunar_date?: LunarDateInfo;
+  jieqi?: string | null;
+}
+
+export interface BestDatesResponse {
+  station: StationInfo;
+  month: number;
+  preference: string;
+  recommendations: RecommendedDate[];
+}
+
+export type PreferenceType = "sunny" | "mild" | "cool" | "outdoor" | "wedding";
