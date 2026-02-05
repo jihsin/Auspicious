@@ -266,6 +266,39 @@ export interface HistoricalComparison {
   status: "normal" | "above_normal" | "below_normal" | "extreme";
 }
 
+// ============================================
+// Phase 3.1 年代分層統計相關型別
+// ============================================
+
+export interface ExtremeRecord {
+  value: number;
+  year: number;
+}
+
+export interface ExtremeRecords {
+  max_temp: ExtremeRecord | null;
+  min_temp: ExtremeRecord | null;
+  max_precip: ExtremeRecord | null;
+}
+
+export interface DecadeStats {
+  decade: string;         // "1990s", "2000s", "2010s", "2020s"
+  start_year: number;
+  end_year: number;
+  years_count: number;
+  temp_avg: number | null;
+  temp_max_avg: number | null;
+  temp_min_avg: number | null;
+  precip_prob: number | null;
+  precip_avg: number | null;
+}
+
+export interface ClimateTrend {
+  trend_per_decade: number;
+  interpretation: string;
+  data_years: number;
+}
+
 export interface HistoricalCompareResponse {
   station: StationInfo;
   date: string;
@@ -274,4 +307,9 @@ export interface HistoricalCompareResponse {
   summary: string;
   lunar_date?: LunarDateInfo;
   jieqi?: string | null;
+  // Phase 3.1 年代分層統計
+  percentile?: number | null;
+  extreme_records?: ExtremeRecords | null;
+  decades?: DecadeStats[] | null;
+  climate_trend?: ClimateTrend | null;
 }

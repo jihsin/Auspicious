@@ -6,6 +6,9 @@ import {
   RealtimeWeatherInfo,
   StationInfo,
   LunarDateInfo,
+  ExtremeRecords,
+  DecadeStats,
+  ClimateTrend,
 } from "@/lib/types";
 
 interface HistoricalCompareCardProps {
@@ -16,6 +19,11 @@ interface HistoricalCompareCardProps {
   summary: string;
   lunarDate?: LunarDateInfo;
   jieqi?: string | null;
+  // Phase 3.1 年代統計
+  percentile?: number | null;
+  extremeRecords?: ExtremeRecords | null;
+  decades?: DecadeStats[] | null;
+  climateTrend?: ClimateTrend | null;
 }
 
 function getStatusColor(status: string): string {
@@ -51,6 +59,25 @@ function getDifferenceIcon(diff: number | null): string {
   return "→";
 }
 
+// 取得百分位數的描述
+function getPercentileDescription(percentile: number): string {
+  if (percentile >= 95) return "歷史極熱";
+  if (percentile >= 80) return "明顯偏暖";
+  if (percentile >= 60) return "略高於平均";
+  if (percentile >= 40) return "接近平均";
+  if (percentile >= 20) return "略低於平均";
+  if (percentile >= 5) return "明顯偏涼";
+  return "歷史極寒";
+}
+
+function getPercentileColor(percentile: number): string {
+  if (percentile >= 80) return "text-red-600";
+  if (percentile >= 60) return "text-orange-500";
+  if (percentile >= 40) return "text-green-600";
+  if (percentile >= 20) return "text-blue-500";
+  return "text-blue-700";
+}
+
 export function HistoricalCompareCard({
   station,
   date,
@@ -59,6 +86,10 @@ export function HistoricalCompareCard({
   summary,
   lunarDate,
   jieqi,
+  percentile,
+  extremeRecords,
+  decades,
+  climateTrend,
 }: HistoricalCompareCardProps) {
   // 格式化日期顯示
   const [month, day] = date.split("-");
@@ -175,6 +206,103 @@ export function HistoricalCompareCard({
       <div className="px-6 py-4 bg-gray-50 border-t">
         <p className="text-center text-gray-600">{summary}</p>
       </div>
+
+      {/* 百分位數與極值記錄 */}
+      {(percentile !== null || extremeRecords) && (
+        <div className="px-6 py-4 border-t">
+          <h4 className="text-sm font-medium text-gray-500 mb-3">歷史定位</h4>
+          <div className="grid grid-cols-2 gap-4">
+            {/* 百分位數 */}
+            {percentile !== null && percentile !== undefined && (
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 text-center">
+                <div className={`text-3xl font-bold ${getPercentileColor(percentile)}`}>
+                  {percentile.toFixed(0)}%
+                </div>
+                <div className="text-xs text-gray-500 mt-1">歷史排名</div>
+                <div className="text-sm font-medium text-gray-700 mt-1">
+                  {getPercentileDescription(percentile)}
+                </div>
+              </div>
+            )}
+            {/* 極值記錄 */}
+            {extremeRecords && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 mb-2">歷史極值</div>
+                <div className="space-y-2 text-sm">
+                  {extremeRecords.max_temp && (
+                    <div className="flex justify-between">
+                      <span className="text-red-500">最高溫</span>
+                      <span className="font-medium">
+                        {extremeRecords.max_temp.value}° ({extremeRecords.max_temp.year})
+                      </span>
+                    </div>
+                  )}
+                  {extremeRecords.min_temp && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-500">最低溫</span>
+                      <span className="font-medium">
+                        {extremeRecords.min_temp.value}° ({extremeRecords.min_temp.year})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 年代分層統計 */}
+      {decades && decades.length > 0 && (
+        <div className="px-6 py-4 border-t">
+          <h4 className="text-sm font-medium text-gray-500 mb-3">年代變化</h4>
+          <div className="space-y-2">
+            {decades.map((decade) => (
+              <div key={decade.decade} className="flex items-center gap-3">
+                <div className="w-16 text-sm font-medium text-gray-600">
+                  {decade.decade}
+                </div>
+                <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                  {decade.temp_avg !== null && (
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-400 to-orange-400 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, (decade.temp_avg / 35) * 100))}%`,
+                      }}
+                    />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                    {decade.temp_avg !== null ? `${decade.temp_avg.toFixed(1)}°C` : "N/A"}
+                  </span>
+                </div>
+                <div className="w-20 text-xs text-gray-400 text-right">
+                  ({decade.years_count}年)
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 氣候趨勢 */}
+      {climateTrend && (
+        <div className="px-6 py-4 border-t bg-gradient-to-r from-emerald-50 to-teal-50">
+          <h4 className="text-sm font-medium text-gray-500 mb-2">氣候趨勢</h4>
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${climateTrend.trend_per_decade > 0 ? "text-red-500" : "text-blue-500"}`}>
+                {climateTrend.trend_per_decade > 0 ? "+" : ""}
+                {climateTrend.trend_per_decade.toFixed(2)}°C
+              </div>
+              <div className="text-xs text-gray-500">每 10 年</div>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-600">{climateTrend.interpretation}</p>
+              <p className="text-xs text-gray-400 mt-1">基於 {climateTrend.data_years} 年資料分析</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

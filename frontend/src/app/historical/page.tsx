@@ -133,6 +133,11 @@ export default function HistoricalPage() {
             summary={result.summary}
             lunarDate={result.lunar_date}
             jieqi={result.jieqi}
+            // Phase 3.1 年代統計
+            percentile={result.percentile}
+            extremeRecords={result.extreme_records}
+            decades={result.decades}
+            climateTrend={result.climate_trend}
           />
         )}
 
