@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { fetchCompareStations, fetchStationsExtended } from "@/lib/api";
 import { StationInfoExtended, CompareResponse } from "@/lib/types";
-import { ComparisonCard } from "@/components";
+import { ComparisonCard, StationCompareChart } from "@/components";
 
 // 預設月份和日期
 const today = new Date();
@@ -203,13 +203,29 @@ export default function ComparePage() {
 
         {/* 比較結果 */}
         {result && !loading && (
-          <ComparisonCard
-            date={result.date}
-            stations={result.stations}
-            bestStation={result.best_station}
-            lunarDate={result.lunar_date}
-            jieqi={result.jieqi}
-          />
+          <>
+            <ComparisonCard
+              date={result.date}
+              stations={result.stations}
+              bestStation={result.best_station}
+              lunarDate={result.lunar_date}
+              jieqi={result.jieqi}
+            />
+
+            {/* 圖表比較 */}
+            <div className="mt-6 space-y-4">
+              <StationCompareChart
+                data={result.stations}
+                metric="sunny_rate"
+                height={200}
+              />
+              <StationCompareChart
+                data={result.stations}
+                metric="temp_avg"
+                height={200}
+              />
+            </div>
+          </>
         )}
 
         {/* Footer */}

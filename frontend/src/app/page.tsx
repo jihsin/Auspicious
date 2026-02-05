@@ -164,6 +164,13 @@ export default function Home() {
             <span className="text-xl">🗺️</span>
             <span className="font-medium">多站點比較</span>
           </Link>
+          <Link
+            href="/range"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">📊</span>
+            <span className="font-medium">日期範圍分析</span>
+          </Link>
         </div>
 
         {/* 說明文字 */}

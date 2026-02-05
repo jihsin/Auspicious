@@ -28,8 +28,18 @@
   - 日期選擇、多站點勾選 (2-5 個)
   - `ComparisonCard` 組件展示比較結果
   - 排名視覺化（金銀銅牌）
+- 日期範圍分析頁面 (`/range`)
+  - 日期範圍選擇器
+  - 溫度趨勢折線圖
+  - 降雨與晴天機率柱狀圖
+  - 範圍統計摘要
+- 天氣圖表組件 (`WeatherChart.tsx`)
+  - `TemperatureChart`: 溫度趨勢折線圖
+  - `PrecipChart`: 降雨與晴天機率柱狀圖
+  - `TendencyPieChart`: 天氣傾向圓餅圖
+  - `StationCompareChart`: 多站點比較柱狀圖
 - `DateRangePicker` 日期範圍選擇器組件
-- 首頁功能入口連結
+- 首頁功能入口連結（3 個功能頁面）
 
 ---
 
@@ -131,7 +141,7 @@ chore: 雜務
 - [x] 日期範圍查詢 API
 - [x] 最佳日期推薦 API
 - [x] 多站點比較功能
-- [ ] 天氣圖表視覺化
+- [x] 天氣圖表視覺化 (recharts)
 - [ ] PWA 離線支援
 - [ ] 更多站點資料擴展
 
