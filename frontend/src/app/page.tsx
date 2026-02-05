@@ -7,8 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import WeatherCard from "@/components/WeatherCard";
-import StationSelector from "@/components/StationSelector";
+import { WeatherCard, StationSelector, LunarCard } from "@/components";
 import { fetchTodayWeather } from "@/lib/api";
 import { DailyWeatherData, ApiError, StationInfoExtended } from "@/lib/types";
 
@@ -136,6 +135,17 @@ export default function Home() {
 
         {/* 天氣卡片 */}
         {data && !loading && !error && <WeatherCard data={data} />}
+
+        {/* 農曆卡片 */}
+        {data && !loading && !error && data.lunar_date && data.yi_ji && (
+          <div className="mt-6 w-full max-w-md">
+            <LunarCard
+              lunarDate={data.lunar_date}
+              yiJi={data.yi_ji}
+              jieqi={data.jieqi}
+            />
+          </div>
+        )}
 
         {/* 說明文字 */}
         <div className="mt-8 max-w-md text-center text-gray-500 text-sm">

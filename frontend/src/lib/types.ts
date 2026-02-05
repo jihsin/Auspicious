@@ -79,6 +79,10 @@ export interface DailyWeatherData {
   precipitation: PrecipitationResponse;
   tendency: WeatherTendencyResponse;
   computed_at: string; // ISO 8601 日期時間格式
+  // 農曆資訊（可選）
+  lunar_date?: LunarDateInfo;
+  yi_ji?: YiJiInfo;
+  jieqi?: string | null;
 }
 
 // ============================================
@@ -137,3 +141,26 @@ export interface GeoLocation {
 }
 
 export type LocationStatus = "idle" | "loading" | "success" | "error" | "denied";
+
+// ============================================
+// 農曆相關型別
+// ============================================
+
+export interface LunarDateInfo {
+  year: number;
+  month: number;
+  day: number;
+  year_cn: string;
+  month_cn: string;
+  day_cn: string;
+  干支年: string;
+  干支月: string;
+  干支日: string;
+  生肖: string;
+  is_leap: boolean;
+}
+
+export interface YiJiInfo {
+  yi: string[];  // 宜
+  ji: string[];  // 忌
+}
