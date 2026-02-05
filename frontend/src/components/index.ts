@@ -11,3 +11,4 @@ export {
   TendencyPieChart,
   StationCompareChart,
 } from "./WeatherChart";
+export { HistoricalCompareCard } from "./HistoricalCompareCard";

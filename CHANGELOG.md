@@ -38,8 +38,16 @@
   - `PrecipChart`: 降雨與晴天機率柱狀圖
   - `TendencyPieChart`: 天氣傾向圓餅圖
   - `StationCompareChart`: 多站點比較柱狀圖
+- 歷史同期比較頁面 (`/historical`)
+  - 即時天氣 vs 歷史統計比較
+  - 異常標示和狀態判斷
+  - `HistoricalCompareCard` 組件
+- PWA 離線支援
+  - Service Worker 自動快取
+  - manifest.json 配置
+  - 可安裝為手機 App
 - `DateRangePicker` 日期範圍選擇器組件
-- 首頁功能入口連結（3 個功能頁面）
+- 首頁功能入口連結（5 個功能頁面）
 
 ---
 
@@ -142,7 +150,8 @@ chore: 雜務
 - [x] 最佳日期推薦 API
 - [x] 多站點比較功能
 - [x] 天氣圖表視覺化 (recharts)
-- [ ] PWA 離線支援
+- [x] PWA 離線支援 (@ducanh2912/next-pwa)
+- [x] 歷史同期比較功能
 - [ ] 更多站點資料擴展
 
 ### 部署

@@ -18,8 +18,11 @@ from app.schemas.weather import (
     DailyWeatherResponse,
     DailyWeatherSummary,
     DateRangeResponse,
+    HistoricalComparison,
+    HistoricalCompareResponse,
     PrecipitationResponse,
     RangeSummary,
+    RealtimeWeatherInfo,
     RecommendedDate,
     StationInfo,
     StationWeatherComparison,
@@ -30,6 +33,7 @@ from app.schemas.weather import (
 )
 from app.schemas.lunar import LunarDateInfo, YiJiInfo
 from app.services.lunar import get_lunar_info
+from app.services.realtime_weather import fetch_realtime_weather
 
 router = APIRouter()
 
@@ -744,6 +748,191 @@ async def compare_stations(
             date=date,
             stations=station_comparisons,
             best_station=best_station,
+            lunar_date=lunar_date,
+            jieqi=jieqi
+        )
+    )
+
+
+def _get_comparison_status(current: float, historical: float, stddev: float) -> str:
+    """判斷今日數值相對於歷史的狀態
+
+    Args:
+        current: 今日數值
+        historical: 歷史平均
+        stddev: 歷史標準差
+
+    Returns:
+        狀態字串: normal, above_normal, below_normal, extreme
+    """
+    if stddev is None or stddev == 0:
+        return "normal"
+
+    diff = current - historical
+    z_score = abs(diff) / stddev
+
+    if z_score >= 2:
+        return "extreme"
+    elif z_score >= 1:
+        return "above_normal" if diff > 0 else "below_normal"
+    else:
+        return "normal"
+
+
+def _generate_summary(comparisons: list[HistoricalComparison]) -> str:
+    """生成綜合評語
+
+    Args:
+        comparisons: 各項指標比較列表
+
+    Returns:
+        綜合評語字串
+    """
+    extreme_items = [c for c in comparisons if c.status == "extreme"]
+    abnormal_items = [c for c in comparisons if c.status in ["above_normal", "below_normal"]]
+
+    if extreme_items:
+        items_str = "、".join([c.metric for c in extreme_items])
+        return f"今日{items_str}明顯異常，與歷史同期差異較大"
+    elif abnormal_items:
+        items_str = "、".join([c.metric for c in abnormal_items])
+        return f"今日{items_str}略有偏離歷史平均"
+    else:
+        return "今日天氣與歷史同期表現相近"
+
+
+@router.get(
+    "/historical/{station_id}",
+    response_model=ApiResponse[HistoricalCompareResponse],
+    summary="歷史同期比較",
+    description="比較今日即時天氣與歷史統計平均"
+)
+async def compare_with_historical(
+    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    db: Session = Depends(get_db)
+) -> ApiResponse[HistoricalCompareResponse]:
+    """歷史同期比較
+
+    取得今日的即時天氣資料，並與歷史同期統計進行比較。
+
+    Args:
+        station_id: 氣象站代碼
+        db: 資料庫 session
+
+    Returns:
+        包含即時天氣與歷史比較的回應
+    """
+    # 驗證站點
+    station_info = _get_station_info(station_id, db)
+
+    # 取得今日日期
+    today = datetime.now()
+    month_day = today.strftime("%m-%d")
+
+    # 查詢歷史統計資料
+    stats = db.query(DailyStatistics).filter(
+        DailyStatistics.station_id == station_id,
+        DailyStatistics.month_day == month_day
+    ).first()
+
+    if not stats:
+        raise HTTPException(
+            status_code=404,
+            detail=f"找不到 {station_info.name} 站 {month_day} 的歷史統計資料"
+        )
+
+    # 取得即時天氣資料
+    realtime = await fetch_realtime_weather(station_id)
+
+    realtime_info = None
+    comparisons = []
+
+    if realtime:
+        realtime_info = RealtimeWeatherInfo(
+            obs_time=realtime.obs_time.isoformat() if realtime.obs_time else None,
+            weather=realtime.weather,
+            temp=realtime.temp,
+            temp_max=realtime.temp_max,
+            temp_min=realtime.temp_min,
+            humidity=realtime.humidity,
+            precipitation=realtime.precipitation,
+        )
+
+        # 溫度比較
+        if realtime.temp is not None and stats.temp_avg_mean is not None:
+            diff = realtime.temp - stats.temp_avg_mean
+            status = _get_comparison_status(
+                realtime.temp,
+                stats.temp_avg_mean,
+                stats.temp_avg_stddev or 3.0
+            )
+            comparisons.append(HistoricalComparison(
+                metric="溫度",
+                current=round(realtime.temp, 1),
+                historical_avg=round(stats.temp_avg_mean, 1),
+                difference=round(diff, 1),
+                status=status
+            ))
+
+        # 最高溫比較
+        if realtime.temp_max is not None and stats.temp_max_mean is not None:
+            diff = realtime.temp_max - stats.temp_max_mean
+            comparisons.append(HistoricalComparison(
+                metric="最高溫",
+                current=round(realtime.temp_max, 1),
+                historical_avg=round(stats.temp_max_mean, 1),
+                difference=round(diff, 1),
+                status="above_normal" if diff > 3 else ("below_normal" if diff < -3 else "normal")
+            ))
+
+        # 最低溫比較
+        if realtime.temp_min is not None and stats.temp_min_mean is not None:
+            diff = realtime.temp_min - stats.temp_min_mean
+            comparisons.append(HistoricalComparison(
+                metric="最低溫",
+                current=round(realtime.temp_min, 1),
+                historical_avg=round(stats.temp_min_mean, 1),
+                difference=round(diff, 1),
+                status="above_normal" if diff > 3 else ("below_normal" if diff < -3 else "normal")
+            ))
+
+        # 降雨比較（如果有降雨資料）
+        if realtime.precipitation is not None:
+            is_rainy = realtime.precipitation > 0.5
+            historical_precip_prob = stats.precip_probability or 0
+            comparisons.append(HistoricalComparison(
+                metric="降雨",
+                current=realtime.precipitation,
+                historical_avg=round(historical_precip_prob * 100, 0),  # 轉為百分比表示
+                difference=None,
+                status="above_normal" if is_rainy and historical_precip_prob < 0.3 else "normal"
+            ))
+    else:
+        # 無法取得即時資料，只返回歷史統計
+        comparisons.append(HistoricalComparison(
+            metric="溫度",
+            current=None,
+            historical_avg=round(stats.temp_avg_mean, 1) if stats.temp_avg_mean else None,
+            difference=None,
+            status="normal"
+        ))
+
+    # 生成綜合評語
+    summary = _generate_summary(comparisons) if realtime else "無法取得即時天氣資料，僅顯示歷史統計"
+
+    # 取得農曆資訊
+    lunar_info = _get_lunar_info_for_date(month_day)
+    lunar_date = LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None
+    jieqi = lunar_info.get("jieqi") if lunar_info else None
+
+    return ApiResponse(
+        success=True,
+        data=HistoricalCompareResponse(
+            station=station_info,
+            date=month_day,
+            realtime=realtime_info,
+            comparisons=comparisons,
+            summary=summary,
             lunar_date=lunar_date,
             jieqi=jieqi
         )

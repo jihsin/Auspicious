@@ -242,3 +242,36 @@ export interface CompareResponse {
   lunar_date?: LunarDateInfo;
   jieqi?: string | null;
 }
+
+// ============================================
+// 歷史同期比較相關型別
+// ============================================
+
+export interface RealtimeWeatherInfo {
+  obs_time: string | null;
+  weather: string | null;
+  temp: number | null;
+  temp_max: number | null;
+  temp_min: number | null;
+  humidity: number | null;
+  precipitation: number | null;
+}
+
+export interface HistoricalComparison {
+  metric: string;
+  current: number | null;
+  historical_avg: number | null;
+  difference: number | null;
+  percentile: number | null;
+  status: "normal" | "above_normal" | "below_normal" | "extreme";
+}
+
+export interface HistoricalCompareResponse {
+  station: StationInfo;
+  date: string;
+  realtime: RealtimeWeatherInfo | null;
+  comparisons: HistoricalComparison[];
+  summary: string;
+  lunar_date?: LunarDateInfo;
+  jieqi?: string | null;
+}

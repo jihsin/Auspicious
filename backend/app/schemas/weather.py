@@ -253,6 +253,41 @@ class CompareResponse(BaseModel):
     jieqi: Optional[str] = Field(None, description="節氣")
 
 
+class RealtimeWeatherInfo(BaseModel):
+    """即時天氣資訊"""
+
+    obs_time: Optional[str] = Field(None, description="觀測時間")
+    weather: Optional[str] = Field(None, description="天氣描述")
+    temp: Optional[float] = Field(None, description="目前溫度 (°C)")
+    temp_max: Optional[float] = Field(None, description="今日最高溫 (°C)")
+    temp_min: Optional[float] = Field(None, description="今日最低溫 (°C)")
+    humidity: Optional[float] = Field(None, description="相對濕度 (%)")
+    precipitation: Optional[float] = Field(None, description="今日累積雨量 (mm)")
+
+
+class HistoricalComparison(BaseModel):
+    """歷史同期比較"""
+
+    metric: str = Field(..., description="比較指標名稱")
+    current: Optional[float] = Field(None, description="今日實際值")
+    historical_avg: Optional[float] = Field(None, description="歷史平均值")
+    difference: Optional[float] = Field(None, description="差異值 (今日 - 歷史)")
+    percentile: Optional[float] = Field(None, description="今日值在歷史分布中的百分位")
+    status: str = Field("normal", description="狀態: normal, above_normal, below_normal, extreme")
+
+
+class HistoricalCompareResponse(BaseModel):
+    """歷史同期比較回應"""
+
+    station: StationInfo = Field(..., description="站點資訊")
+    date: str = Field(..., pattern=r"^\d{2}-\d{2}$", description="日期 (MM-DD)")
+    realtime: Optional[RealtimeWeatherInfo] = Field(None, description="即時天氣資訊")
+    comparisons: list[HistoricalComparison] = Field(..., description="各項指標比較列表")
+    summary: str = Field(..., description="綜合評語")
+    lunar_date: Optional[LunarDateInfo] = Field(None, description="農曆日期")
+    jieqi: Optional[str] = Field(None, description="節氣")
+
+
 class ApiResponse(BaseModel, Generic[T]):
     """API 回應包裝"""
 

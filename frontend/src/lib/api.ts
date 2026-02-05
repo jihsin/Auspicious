@@ -15,6 +15,7 @@ import {
   BestDatesResponse,
   PreferenceType,
   CompareResponse,
+  HistoricalCompareResponse,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -351,4 +352,29 @@ export async function fetchCompareStations(
   );
 
   return handleResponse<CompareResponse>(response);
+}
+
+// ============================================
+// 歷史同期比較 API
+// ============================================
+
+/**
+ * 取得歷史同期比較資料
+ *
+ * @param stationId - 氣象站代碼
+ * @returns 今日即時天氣與歷史統計的比較結果
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await fetchHistoricalCompare("466920");
+ * console.log(result.summary); // 綜合評語
+ */
+export async function fetchHistoricalCompare(
+  stationId: string
+): Promise<HistoricalCompareResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/weather/historical/${stationId}`
+  );
+
+  return handleResponse<HistoricalCompareResponse>(response);
 }

@@ -171,6 +171,13 @@ export default function Home() {
             <span className="text-xl">📊</span>
             <span className="font-medium">日期範圍分析</span>
           </Link>
+          <Link
+            href="/historical"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">⏱️</span>
+            <span className="font-medium">歷史同期比較</span>
+          </Link>
         </div>
 
         {/* 說明文字 */}
