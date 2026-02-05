@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Phase 3: 進階功能開發 (2026-02-05 ~ 進行中)
+
+#### 新增功能
+
+**後端 (Backend)**
+- 日期範圍查詢 API (`GET /api/v1/weather/range/{station_id}`)
+  - 支援查詢指定日期範圍的歷史統計（最多 31 天）
+  - 返回每日摘要與範圍統計
+  - 自動計算最佳/最差日期
+- 最佳日期推薦 API (`GET /api/v1/weather/recommend/{station_id}`)
+  - 5 種偏好類型：sunny(晴天), mild(溫和), cool(涼爽), outdoor(戶外), wedding(婚禮)
+  - 基於天氣統計計算推薦分數 (0-100)
+  - 返回推薦理由與農曆資訊
+
+---
+
 ### Phase 2: GPS 定位 + 多站點擴展 (2026-02-04 ~ 2026-02-05)
 
 #### 新增功能
