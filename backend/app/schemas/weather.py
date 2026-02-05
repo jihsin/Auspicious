@@ -265,6 +265,45 @@ class RealtimeWeatherInfo(BaseModel):
     precipitation: Optional[float] = Field(None, description="今日累積雨量 (mm)")
 
 
+# ===== Phase 3.1 年代分層統計 Schema =====
+
+class ExtremeRecord(BaseModel):
+    """極值紀錄（含年份）"""
+
+    value: float = Field(..., description="極值數值")
+    year: int = Field(..., description="發生年份")
+
+
+class ExtremeRecords(BaseModel):
+    """歷史極值紀錄"""
+
+    max_temp: Optional[ExtremeRecord] = Field(None, description="歷史最高溫")
+    min_temp: Optional[ExtremeRecord] = Field(None, description="歷史最低溫")
+    max_precip: Optional[ExtremeRecord] = Field(None, description="歷史最大降水量")
+
+
+class DecadeStats(BaseModel):
+    """單一年代的統計資料"""
+
+    decade: str = Field(..., description="年代標籤 (1990s, 2000s, 2010s, 2020s)")
+    start_year: int = Field(..., description="起始年份")
+    end_year: int = Field(..., description="結束年份")
+    years_count: int = Field(..., description="資料年數")
+    temp_avg: Optional[float] = Field(None, description="平均溫度 (°C)")
+    temp_max_avg: Optional[float] = Field(None, description="最高溫平均 (°C)")
+    temp_min_avg: Optional[float] = Field(None, description="最低溫平均 (°C)")
+    precip_prob: Optional[float] = Field(None, ge=0, le=1, description="降雨機率")
+    precip_avg: Optional[float] = Field(None, description="有雨時平均降水量 (mm)")
+
+
+class ClimateTrend(BaseModel):
+    """氣候趨勢分析"""
+
+    trend_per_decade: Optional[float] = Field(None, description="每 10 年溫度變化 (°C)")
+    interpretation: str = Field(..., description="趨勢解讀")
+    data_years: int = Field(..., description="資料年數")
+
+
 class HistoricalComparison(BaseModel):
     """歷史同期比較"""
 
@@ -286,6 +325,11 @@ class HistoricalCompareResponse(BaseModel):
     summary: str = Field(..., description="綜合評語")
     lunar_date: Optional[LunarDateInfo] = Field(None, description="農曆日期")
     jieqi: Optional[str] = Field(None, description="節氣")
+    # Phase 3.1 年代分層統計
+    percentile: Optional[float] = Field(None, ge=0, le=100, description="目前溫度在歷史分布中的百分位數 (0-100)")
+    extreme_records: Optional[ExtremeRecords] = Field(None, description="歷史極值紀錄（含年份）")
+    decades: Optional[list[DecadeStats]] = Field(None, description="各年代分層統計")
+    climate_trend: Optional[ClimateTrend] = Field(None, description="氣候變遷趨勢分析")
 
 
 class ApiResponse(BaseModel, Generic[T]):

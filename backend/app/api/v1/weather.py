@@ -14,10 +14,14 @@ from app.schemas.weather import (
     ApiResponse,
     AnalysisPeriod,
     BestDatesResponse,
+    ClimateTrend,
     CompareResponse,
     DailyWeatherResponse,
     DailyWeatherSummary,
     DateRangeResponse,
+    DecadeStats,
+    ExtremeRecord,
+    ExtremeRecords,
     HistoricalComparison,
     HistoricalCompareResponse,
     PrecipitationResponse,
@@ -34,6 +38,11 @@ from app.schemas.weather import (
 from app.schemas.lunar import LunarDateInfo, YiJiInfo
 from app.services.lunar import get_lunar_info
 from app.services.realtime_weather import fetch_realtime_weather
+from app.services.decade_stats import (
+    calculate_decade_stats,
+    get_percentile_rank,
+    get_extreme_records,
+)
 
 router = APIRouter()
 
@@ -925,6 +934,55 @@ async def compare_with_historical(
     lunar_date = LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None
     jieqi = lunar_info.get("jieqi") if lunar_info else None
 
+    # 取得年代統計和趨勢資訊
+    decade_stats = calculate_decade_stats(db, station_id, month_day)
+
+    # 取得百分位數（如果有即時溫度）
+    percentile = None
+    if realtime and realtime.temp is not None:
+        percentile = get_percentile_rank(db, station_id, month_day, realtime.temp)
+
+    # 取得極值記錄並轉換為 Schema
+    extreme_records_data = get_extreme_records(db, station_id, month_day)
+    extreme_records_response = None
+    if extreme_records_data:
+        extreme_records_response = ExtremeRecords(
+            max_temp=ExtremeRecord(**extreme_records_data["max_temp"])
+                if extreme_records_data.get("max_temp") else None,
+            min_temp=ExtremeRecord(**extreme_records_data["min_temp"])
+                if extreme_records_data.get("min_temp") else None,
+            max_precip=ExtremeRecord(**extreme_records_data["max_precip"])
+                if extreme_records_data.get("max_precip") else None,
+        )
+
+    # 組裝年代資訊 (使用 Pydantic Schema)
+    decades_response = None
+    climate_trend_response = None
+
+    if decade_stats:
+        decades_response = [
+            DecadeStats(
+                decade=d.decade,
+                start_year=d.start_year,
+                end_year=d.end_year,
+                years_count=d.years_count,
+                temp_avg=round(d.temp_avg, 1) if d.temp_avg else None,
+                temp_max_avg=round(d.temp_max_avg, 1) if d.temp_max_avg else None,
+                temp_min_avg=round(d.temp_min_avg, 1) if d.temp_min_avg else None,
+                precip_prob=round(d.precip_prob, 3) if d.precip_prob else None,
+                precip_avg=round(d.precip_avg, 1) if d.precip_avg else None,
+            )
+            for d in decade_stats.decades
+        ]
+
+        # 氣候趨勢分析
+        if decade_stats.trend_temp is not None and decade_stats.all_time:
+            climate_trend_response = ClimateTrend(
+                trend_per_decade=decade_stats.trend_temp,
+                interpretation=_interpret_trend(decade_stats.trend_temp),
+                data_years=decade_stats.all_time.years_count,
+            )
+
     return ApiResponse(
         success=True,
         data=HistoricalCompareResponse(
@@ -934,6 +992,130 @@ async def compare_with_historical(
             comparisons=comparisons,
             summary=summary,
             lunar_date=lunar_date,
-            jieqi=jieqi
+            jieqi=jieqi,
+            # Phase 3.1 年代分層統計欄位
+            percentile=percentile,
+            extreme_records=extreme_records_response,
+            decades=decades_response,
+            climate_trend=climate_trend_response,
         )
     )
+
+
+@router.get(
+    "/decades/{station_id}/{month_day}",
+    summary="年代分層統計",
+    description="取得指定日期的年代分層統計，展示氣候變遷趨勢"
+)
+async def get_decade_statistics(
+    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    month_day: str = Path(
+        ...,
+        pattern=r"^\d{2}-\d{2}$",
+        description="日期 (MM-DD 格式)",
+        example="02-05"
+    ),
+    db: Session = Depends(get_db)
+):
+    """年代分層統計
+
+    取得指定站點和日期的各年代統計資料，包含：
+    - 1990s, 2000s, 2010s, 2020s 各年代平均
+    - 近 10 年 vs 全期比較
+    - 溫度變化趨勢（每 10 年變化量）
+    - 歷史極值記錄（含年份）
+    """
+    # 驗證站點
+    station_info = _get_station_info(station_id, db)
+
+    # 計算年代統計
+    decade_stats = calculate_decade_stats(db, station_id, month_day)
+
+    if not decade_stats:
+        raise HTTPException(
+            status_code=404,
+            detail=f"找不到 {station_info.name} 站 {month_day} 的原始觀測資料"
+        )
+
+    # 取得極值記錄
+    extreme_records = get_extreme_records(db, station_id, month_day)
+
+    # 組裝回應
+    decades = [
+        {
+            "decade": d.decade,
+            "period": f"{d.start_year}-{d.end_year}",
+            "years_count": d.years_count,
+            "temperature": {
+                "avg": round(d.temp_avg, 1) if d.temp_avg else None,
+                "max_avg": round(d.temp_max_avg, 1) if d.temp_max_avg else None,
+                "min_avg": round(d.temp_min_avg, 1) if d.temp_min_avg else None,
+            },
+            "precipitation": {
+                "probability": round(d.precip_prob * 100, 1) if d.precip_prob else None,
+                "avg_when_rain": round(d.precip_avg, 1) if d.precip_avg else None,
+            }
+        }
+        for d in decade_stats.decades
+    ]
+
+    # 近 10 年統計
+    recent_10y = None
+    if decade_stats.recent_10y:
+        r = decade_stats.recent_10y
+        recent_10y = {
+            "period": f"{r.start_year}-{r.end_year}",
+            "years_count": r.years_count,
+            "temp_avg": round(r.temp_avg, 1) if r.temp_avg else None,
+            "precip_prob": round(r.precip_prob * 100, 1) if r.precip_prob else None,
+        }
+
+    # 全期統計
+    all_time = None
+    if decade_stats.all_time:
+        a = decade_stats.all_time
+        all_time = {
+            "period": f"{a.start_year}-{a.end_year}",
+            "years_count": a.years_count,
+            "temp_avg": round(a.temp_avg, 1) if a.temp_avg else None,
+            "precip_prob": round(a.precip_prob * 100, 1) if a.precip_prob else None,
+        }
+
+    # 趨勢分析
+    trend_analysis = None
+    if decade_stats.trend_temp is not None:
+        trend_analysis = {
+            "temp_change_per_decade": decade_stats.trend_temp,
+            "interpretation": _interpret_trend(decade_stats.trend_temp),
+        }
+
+    # 取得農曆資訊
+    lunar_info = _get_lunar_info_for_date(month_day)
+
+    return ApiResponse(
+        success=True,
+        data={
+            "station": station_info,
+            "month_day": month_day,
+            "decades": decades,
+            "recent_10y": recent_10y,
+            "all_time": all_time,
+            "trend": trend_analysis,
+            "extreme_records": extreme_records,
+            "lunar_date": LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None,
+        }
+    )
+
+
+def _interpret_trend(trend_per_decade: float) -> str:
+    """解釋溫度趨勢"""
+    if trend_per_decade > 0.5:
+        return f"明顯暖化趨勢，每 10 年上升約 {trend_per_decade}°C"
+    elif trend_per_decade > 0.2:
+        return f"輕微暖化趨勢，每 10 年上升約 {trend_per_decade}°C"
+    elif trend_per_decade < -0.5:
+        return f"降溫趨勢，每 10 年下降約 {abs(trend_per_decade)}°C"
+    elif trend_per_decade < -0.2:
+        return f"輕微降溫趨勢，每 10 年下降約 {abs(trend_per_decade)}°C"
+    else:
+        return "氣溫相對穩定，無明顯變化趨勢"
