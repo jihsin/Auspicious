@@ -174,6 +174,40 @@ class DailyWeatherResponse(BaseModel):
         }
 
 
+class DailyWeatherSummary(BaseModel):
+    """每日天氣摘要（用於範圍查詢）"""
+
+    month_day: str = Field(..., pattern=r"^\d{2}-\d{2}$", description="日期 (MM-DD)")
+    temp_avg: Optional[float] = Field(None, description="平均溫度 (°C)")
+    temp_max: Optional[float] = Field(None, description="最高溫平均 (°C)")
+    temp_min: Optional[float] = Field(None, description="最低溫平均 (°C)")
+    precip_prob: Optional[float] = Field(None, ge=0, le=1, description="降雨機率")
+    sunny_rate: Optional[float] = Field(None, ge=0, le=1, description="晴天率")
+    # 農曆資訊
+    lunar_date: Optional[LunarDateInfo] = Field(None, description="農曆日期")
+    jieqi: Optional[str] = Field(None, description="節氣")
+
+
+class RangeSummary(BaseModel):
+    """範圍統計摘要"""
+
+    avg_temp: Optional[float] = Field(None, description="範圍內平均溫度")
+    avg_precip_prob: Optional[float] = Field(None, description="範圍內平均降雨機率")
+    avg_sunny_rate: Optional[float] = Field(None, description="範圍內平均晴天率")
+    best_day: Optional[str] = Field(None, description="最佳日期 (晴天率最高)")
+    worst_day: Optional[str] = Field(None, description="最差日期 (降雨機率最高)")
+
+
+class DateRangeResponse(BaseModel):
+    """日期範圍查詢回應"""
+
+    station: StationInfo = Field(..., description="站點資訊")
+    start_date: str = Field(..., pattern=r"^\d{2}-\d{2}$", description="起始日期")
+    end_date: str = Field(..., pattern=r"^\d{2}-\d{2}$", description="結束日期")
+    days: list[DailyWeatherSummary] = Field(..., description="每日統計列表")
+    summary: RangeSummary = Field(..., description="範圍統計摘要")
+
+
 class ApiResponse(BaseModel, Generic[T]):
     """API 回應包裝"""
 

@@ -2,9 +2,9 @@
 """天氣查詢 API 路由"""
 
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,7 +14,10 @@ from app.schemas.weather import (
     ApiResponse,
     AnalysisPeriod,
     DailyWeatherResponse,
+    DailyWeatherSummary,
+    DateRangeResponse,
     PrecipitationResponse,
+    RangeSummary,
     StationInfo,
     TemperatureRecord,
     TemperatureResponse,
@@ -236,4 +239,185 @@ async def get_today_statistics(
     return ApiResponse(
         success=True,
         data=_statistics_to_response(stats, station_info, lunar_info)
+    )
+
+
+def _generate_date_range(start: str, end: str) -> List[str]:
+    """產生日期範圍列表
+
+    Args:
+        start: 起始日期 MM-DD
+        end: 結束日期 MM-DD
+
+    Returns:
+        日期列表 ["MM-DD", ...]
+    """
+    dates = []
+    start_month, start_day = map(int, start.split("-"))
+    end_month, end_day = map(int, end.split("-"))
+
+    # 使用 2000 年（閏年）來處理日期
+    start_date = date(2000, start_month, start_day)
+    end_date = date(2000, end_month, end_day)
+
+    # 處理跨年的情況
+    if end_date < start_date:
+        end_date = date(2001, end_month, end_day)
+
+    current = start_date
+    while current <= end_date:
+        dates.append(current.strftime("%m-%d"))
+        current = date(current.year, current.month, current.day)
+        # 手動增加一天
+        try:
+            current = date(current.year, current.month, current.day + 1)
+        except ValueError:
+            # 月底，跳到下個月
+            if current.month == 12:
+                current = date(current.year + 1, 1, 1)
+            else:
+                current = date(current.year, current.month + 1, 1)
+
+    return dates
+
+
+@router.get(
+    "/range/{station_id}",
+    response_model=ApiResponse[DateRangeResponse],
+    summary="查詢日期範圍的歷史天氣統計",
+    description="根據站點代碼和日期範圍查詢歷史天氣統計資料"
+)
+async def get_range_statistics(
+    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    start: str = Query(
+        ...,
+        pattern=r"^\d{2}-\d{2}$",
+        description="起始日期 (MM-DD 格式)",
+        example="03-01"
+    ),
+    end: str = Query(
+        ...,
+        pattern=r"^\d{2}-\d{2}$",
+        description="結束日期 (MM-DD 格式)",
+        example="03-15"
+    ),
+    db: Session = Depends(get_db)
+) -> ApiResponse[DateRangeResponse]:
+    """查詢日期範圍的歷史天氣統計
+
+    Args:
+        station_id: 氣象站代碼
+        start: 起始日期 (MM-DD)
+        end: 結束日期 (MM-DD)
+        db: 資料庫 session
+
+    Returns:
+        包含範圍內每日統計與摘要的回應
+    """
+    # 驗證站點
+    station_info = _get_station_info(station_id, db)
+
+    # 驗證日期格式
+    for date_str in [start, end]:
+        try:
+            month, day = map(int, date_str.split("-"))
+            if not (1 <= month <= 12 and 1 <= day <= 31):
+                raise ValueError("Invalid date")
+            datetime(2000, month, day)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"無效的日期格式: {date_str}，請使用 MM-DD 格式"
+            )
+
+    # 產生日期範圍
+    date_range = _generate_date_range(start, end)
+
+    # 限制範圍（最多 31 天）
+    if len(date_range) > 31:
+        raise HTTPException(
+            status_code=400,
+            detail="日期範圍不能超過 31 天"
+        )
+
+    # 查詢所有日期的統計資料
+    stats_list = db.query(DailyStatistics).filter(
+        DailyStatistics.station_id == station_id,
+        DailyStatistics.month_day.in_(date_range)
+    ).all()
+
+    # 建立查詢結果字典
+    stats_dict = {s.month_day: s for s in stats_list}
+
+    # 組裝每日摘要
+    days = []
+    total_temp = 0
+    total_precip = 0
+    total_sunny = 0
+    valid_count = 0
+    best_day = None
+    best_sunny = -1
+    worst_day = None
+    worst_precip = -1
+
+    for md in date_range:
+        stats = stats_dict.get(md)
+
+        if stats:
+            # 取得農曆資訊
+            lunar_info = _get_lunar_info_for_date(md)
+            lunar_date = LunarDateInfo(**lunar_info["lunar_date"]) if lunar_info else None
+            jieqi = lunar_info.get("jieqi") if lunar_info else None
+
+            summary = DailyWeatherSummary(
+                month_day=md,
+                temp_avg=stats.temp_avg_mean,
+                temp_max=stats.temp_max_mean,
+                temp_min=stats.temp_min_mean,
+                precip_prob=stats.precip_probability,
+                sunny_rate=stats.tendency_sunny,
+                lunar_date=lunar_date,
+                jieqi=jieqi
+            )
+            days.append(summary)
+
+            # 統計計算
+            if stats.temp_avg_mean is not None:
+                total_temp += stats.temp_avg_mean
+            if stats.precip_probability is not None:
+                total_precip += stats.precip_probability
+            if stats.tendency_sunny is not None:
+                total_sunny += stats.tendency_sunny
+
+                # 找最佳日期（晴天率最高）
+                if stats.tendency_sunny > best_sunny:
+                    best_sunny = stats.tendency_sunny
+                    best_day = md
+
+            if stats.precip_probability is not None:
+                # 找最差日期（降雨機率最高）
+                if stats.precip_probability > worst_precip:
+                    worst_precip = stats.precip_probability
+                    worst_day = md
+
+            valid_count += 1
+
+    # 計算範圍摘要
+    range_summary = RangeSummary(
+        avg_temp=round(total_temp / valid_count, 1) if valid_count > 0 else None,
+        avg_precip_prob=round(total_precip / valid_count, 2) if valid_count > 0 else None,
+        avg_sunny_rate=round(total_sunny / valid_count, 2) if valid_count > 0 else None,
+        best_day=best_day,
+        worst_day=worst_day
+    )
+
+    return ApiResponse(
+        success=True,
+        data=DateRangeResponse(
+            station=station_info,
+            start_date=start,
+            end_date=end,
+            days=days,
+            summary=range_summary
+        )
     )
