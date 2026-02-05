@@ -530,7 +530,8 @@ def get_current_solar_term(dt: date) -> Optional[str]:
     dt_full = datetime(dt.year, dt.month, dt.day, 12, 0)
     lunar = cnlunar.Lunar(dt_full)
     jieqi = lunar.todaySolarTerms
-    return jieqi if jieqi and jieqi != "無" else None
+    # cnlunar 返回簡體「无」，同時檢查繁體「無」
+    return jieqi if jieqi and jieqi not in ["無", "无"] else None
 
 
 def get_nearest_solar_term(dt: date) -> dict:
@@ -555,7 +556,7 @@ def get_nearest_solar_term(dt: date) -> dict:
         dt_full = datetime(check_date.year, check_date.month, check_date.day, 12, 0)
         lunar = cnlunar.Lunar(dt_full)
         jieqi = lunar.todaySolarTerms
-        if jieqi and jieqi != "無":
+        if jieqi and jieqi not in ["無", "无"]:
             current_term = jieqi
             break
 
@@ -567,7 +568,7 @@ def get_nearest_solar_term(dt: date) -> dict:
         dt_full = datetime(check_date.year, check_date.month, check_date.day, 12, 0)
         lunar = cnlunar.Lunar(dt_full)
         jieqi = lunar.todaySolarTerms
-        if jieqi and jieqi != "無":
+        if jieqi and jieqi not in ["無", "无"]:
             next_term = jieqi
             days_to_next = i
             break
