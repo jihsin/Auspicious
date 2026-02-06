@@ -9,8 +9,11 @@ import hashlib
 import hmac
 import base64
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+# 台灣時區 (UTC+8)
+TW_TIMEZONE = timezone(timedelta(hours=8))
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -161,7 +164,7 @@ class WeatherTools:
         if not realtime:
             return {"error": f"無法取得 {city} 的即時天氣資料"}
 
-        today = datetime.now()
+        today = datetime.now(TW_TIMEZONE)
         month_day = today.strftime("%m-%d")
         stats_station = STATS_STATIONS.get(city, "466920")
         stats = self.db.query(DailyStatistics).filter(
@@ -361,7 +364,7 @@ class WeatherTools:
 
     def get_future_date_stats(self, city: str, days_from_today: int) -> dict:
         """取得未來某天的歷史統計預估"""
-        target_date = datetime.now() + timedelta(days=days_from_today)
+        target_date = datetime.now(TW_TIMEZONE) + timedelta(days=days_from_today)
         month_day = target_date.strftime("%m-%d")
 
         result = self.get_date_statistics(city, month_day)
@@ -585,7 +588,7 @@ async def process_with_function_calling(user_message: str, db: Session, user_id:
     client = genai.Client(api_key=GEMINI_API_KEY)
     tools = WeatherTools(db)
 
-    today = datetime.now()
+    today = datetime.now(TW_TIMEZONE)
     system_instruction = f"""你是「好日子」天氣助手。今天是 {today.strftime('%Y-%m-%d')}（星期{['一','二','三','四','五','六','日'][today.weekday()]}）。
 
 核心理念：
