@@ -15,8 +15,8 @@ from typing import Optional
 from dataclasses import dataclass
 import json
 
-import google.generativeai as genai
-from google.generativeai.types import GenerateContentResponse
+from google import genai
+from google.genai import types
 
 # 延遲導入避免循環依賴
 _notification_module = None
@@ -66,38 +66,39 @@ class AIResponse:
     cached: bool = False
 
 
-def _init_model() -> Optional[genai.GenerativeModel]:
-    """初始化 Gemini 模型"""
+def _init_client() -> Optional[genai.Client]:
+    """初始化 Gemini Client"""
     if not GEMINI_API_KEY:
         return None
 
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel(
-            model_name=MODEL_NAME,
-            generation_config=GENERATION_CONFIG,
-            safety_settings=SAFETY_SETTINGS,
-        )
-        return model
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        return client
     except Exception as e:
         print(f"初始化 Gemini 失敗: {e}")
         return None
 
 
-_model: Optional[genai.GenerativeModel] = None
+_client: Optional[genai.Client] = None
 
 
-def get_model() -> Optional[genai.GenerativeModel]:
-    """取得模型實例（延遲初始化）"""
-    global _model
-    if _model is None:
-        _model = _init_model()
-    return _model
+def get_client() -> Optional[genai.Client]:
+    """取得 Client 實例（延遲初始化）"""
+    global _client
+    if _client is None:
+        _client = _init_client()
+    return _client
+
+
+# 保持向後兼容
+def get_model():
+    """取得模型（向後兼容）"""
+    return get_client()
 
 
 def is_ai_available() -> bool:
     """檢查 AI 服務是否可用"""
-    return bool(GEMINI_API_KEY) and get_model() is not None
+    return bool(GEMINI_API_KEY) and get_client() is not None
 
 
 # ============================================
@@ -292,15 +293,22 @@ def generate_solar_term_insight(
     historical_avg: Optional[dict] = None,
 ) -> Optional[AIResponse]:
     """生成節氣深度解讀"""
-    model = get_model()
-    if not model:
+    client = get_client()
+    if not client:
         return None
 
     prompt = _create_solar_term_prompt(term_name, term_info, current_weather, historical_avg)
 
     try:
-        response = model.generate_content(
-            [SYSTEM_CONTEXT, prompt],
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"{SYSTEM_CONTEXT}\n\n{prompt}",
+            config=types.GenerateContentConfig(
+                temperature=GENERATION_CONFIG["temperature"],
+                top_p=GENERATION_CONFIG["top_p"],
+                top_k=GENERATION_CONFIG["top_k"],
+                max_output_tokens=GENERATION_CONFIG["max_output_tokens"],
+            )
         )
 
         if response.text:
@@ -327,15 +335,22 @@ def generate_proverb_insight(
     verification_result: Optional[dict] = None,
 ) -> Optional[AIResponse]:
     """生成諺語科學解讀"""
-    model = get_model()
-    if not model:
+    client = get_client()
+    if not client:
         return None
 
     prompt = _create_proverb_prompt(proverb_text, proverb_info, verification_result)
 
     try:
-        response = model.generate_content(
-            [SYSTEM_CONTEXT, prompt],
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"{SYSTEM_CONTEXT}\n\n{prompt}",
+            config=types.GenerateContentConfig(
+                temperature=GENERATION_CONFIG["temperature"],
+                top_p=GENERATION_CONFIG["top_p"],
+                top_k=GENERATION_CONFIG["top_k"],
+                max_output_tokens=GENERATION_CONFIG["max_output_tokens"],
+            )
         )
 
         if response.text:
@@ -357,8 +372,8 @@ def generate_activity_suggestion(
     historical_stats: dict,
 ) -> Optional[AIResponse]:
     """生成活動建議"""
-    model = get_model()
-    if not model:
+    client = get_client()
+    if not client:
         return None
 
     date_str = target_date.strftime("%Y年%m月%d日")
@@ -367,8 +382,15 @@ def generate_activity_suggestion(
     )
 
     try:
-        response = model.generate_content(
-            [SYSTEM_CONTEXT, prompt],
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"{SYSTEM_CONTEXT}\n\n{prompt}",
+            config=types.GenerateContentConfig(
+                temperature=GENERATION_CONFIG["temperature"],
+                top_p=GENERATION_CONFIG["top_p"],
+                top_k=GENERATION_CONFIG["top_k"],
+                max_output_tokens=GENERATION_CONFIG["max_output_tokens"],
+            )
         )
 
         if response.text:
@@ -390,8 +412,8 @@ def generate_daily_insight(
     climate_trend: Optional[dict] = None,
 ) -> Optional[AIResponse]:
     """生成每日洞察"""
-    model = get_model()
-    if not model:
+    client = get_client()
+    if not client:
         return None
 
     date_str = target_date.strftime("%Y年%m月%d日")
@@ -400,8 +422,15 @@ def generate_daily_insight(
     )
 
     try:
-        response = model.generate_content(
-            [SYSTEM_CONTEXT, prompt],
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=f"{SYSTEM_CONTEXT}\n\n{prompt}",
+            config=types.GenerateContentConfig(
+                temperature=GENERATION_CONFIG["temperature"],
+                top_p=GENERATION_CONFIG["top_p"],
+                top_k=GENERATION_CONFIG["top_k"],
+                max_output_tokens=GENERATION_CONFIG["max_output_tokens"],
+            )
         )
 
         if response.text:
