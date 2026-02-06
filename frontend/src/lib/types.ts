@@ -313,3 +313,64 @@ export interface HistoricalCompareResponse {
   decades?: DecadeStats[] | null;
   climate_trend?: ClimateTrend | null;
 }
+
+// ============================================
+// Phase 3.2 節氣相關型別
+// ============================================
+
+export interface SolarTermInfo {
+  name: string;
+  name_en: string;
+  order: number;
+  season: string;
+  solar_longitude: number;
+  typical_date: string;
+  astronomy: string;
+  agriculture: string;
+  weather: string;
+  phenology: string[];
+  proverbs: string[];
+  health_tips: string;
+}
+
+export interface CurrentSolarTermResponse {
+  current_term: string | null;
+  nearest_term: string;
+  days_until_next: number;
+  next_term: string;
+}
+
+// ============================================
+// Phase 3.4 活動規劃相關型別
+// ============================================
+
+export interface ActivityType {
+  type: string;
+  key: string;
+  description: string;
+}
+
+export interface DayScore {
+  date: string;
+  score: number;
+  weather_score: number;
+  rain_probability: number;
+  temp_avg: number;
+  sunny_ratio: number;
+  solar_term: string | null;
+  lunar_date: string;
+  lunar_yi: string[];
+  lunar_ji: string[];
+  notes: string[];
+}
+
+export interface PlannerResult {
+  activity_type: string;
+  location: string;
+  station_id: string;
+  station_name: string;
+  date_range: [string, string];
+  recommendations: DayScore[];
+  best_date: DayScore | null;
+  summary: string;
+}

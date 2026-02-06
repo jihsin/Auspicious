@@ -151,6 +151,20 @@ export default function Home() {
         {/* 功能連結 */}
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Link
+            href="/planner"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">📅</span>
+            <span className="font-medium">智慧活動規劃</span>
+          </Link>
+          <Link
+            href="/solar-term"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">🌿</span>
+            <span className="font-medium">二十四節氣</span>
+          </Link>
+          <Link
             href="/recommend"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
@@ -159,7 +173,7 @@ export default function Home() {
           </Link>
           <Link
             href="/compare"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
           >
             <span className="text-xl">🗺️</span>
             <span className="font-medium">多站點比較</span>

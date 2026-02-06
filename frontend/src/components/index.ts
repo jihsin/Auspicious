@@ -12,3 +12,5 @@ export {
   StationCompareChart,
 } from "./WeatherChart";
 export { HistoricalCompareCard } from "./HistoricalCompareCard";
+export { SolarTermCard } from "./SolarTermCard";
+export { ActivityPlannerCard } from "./ActivityPlannerCard";

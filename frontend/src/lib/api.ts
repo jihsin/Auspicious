@@ -16,6 +16,10 @@ import {
   PreferenceType,
   CompareResponse,
   HistoricalCompareResponse,
+  SolarTermInfo,
+  CurrentSolarTermResponse,
+  ActivityType,
+  PlannerResult,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -377,4 +381,93 @@ export async function fetchHistoricalCompare(
   );
 
   return handleResponse<HistoricalCompareResponse>(response);
+}
+
+// ============================================
+// 節氣 API
+// ============================================
+
+/**
+ * 取得所有節氣列表
+ */
+export async function fetchAllSolarTerms(): Promise<SolarTermInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/solar-term/all`);
+  return handleResponse<SolarTermInfo[]>(response);
+}
+
+/**
+ * 取得指定節氣資訊
+ */
+export async function fetchSolarTerm(termName: string): Promise<SolarTermInfo> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/solar-term/${encodeURIComponent(termName)}`
+  );
+  return handleResponse<SolarTermInfo>(response);
+}
+
+/**
+ * 取得當前節氣資訊
+ */
+export async function fetchCurrentSolarTerm(
+  date?: string
+): Promise<CurrentSolarTermResponse> {
+  const params = date ? `?date=${date}` : "";
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/solar-term/current${params}`
+  );
+  return handleResponse<CurrentSolarTermResponse>(response);
+}
+
+// ============================================
+// 活動規劃 API
+// ============================================
+
+/**
+ * 取得所有活動類型
+ */
+export async function fetchActivityTypes(): Promise<ActivityType[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/planner/activity-types`);
+  return handleResponse<ActivityType[]>(response);
+}
+
+/**
+ * 規劃活動最佳日期
+ */
+export async function fetchPlanActivity(
+  activity: string,
+  stationId: string,
+  startDate: string,
+  endDate: string,
+  topN: number = 5
+): Promise<PlannerResult> {
+  const params = new URLSearchParams({
+    activity,
+    station_id: stationId,
+    start_date: startDate,
+    end_date: endDate,
+    top_n: String(topN),
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/planner/plan?${params.toString()}`
+  );
+  return handleResponse<PlannerResult>(response);
+}
+
+/**
+ * 快速規劃（未來 30 天）
+ */
+export async function fetchQuickPlan(
+  activity: string,
+  stationId: string = "466920"
+): Promise<PlannerResult> {
+  const params = new URLSearchParams({
+    activity,
+    station_id: stationId,
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/planner/quick-plan?${params.toString()}`
+  );
+  return handleResponse<PlannerResult>(response);
 }
