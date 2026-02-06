@@ -493,7 +493,7 @@ async def process_with_function_calling(user_message: str, db: Session) -> str:
     final_response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[
-            types.Content(role="user", parts=[types.Part.from_text(user_message)]),
+            types.Content(role="user", parts=[types.Part.from_text(text=user_message)]),
             response.candidates[0].content,  # AI 的 function call
             types.Content(role="tool", parts=function_responses)  # 工具結果
         ],
