@@ -19,6 +19,7 @@ from app.services.ai_engine import (
     parse_json_response,
 )
 from app.services.solar_term import get_solar_term_info, get_current_solar_term, get_nearest_solar_term
+from app.api.v1.line_webhook import process_with_function_calling
 from app.services.proverb import get_proverb_by_id
 from app.services.proverb_verify import verify_proverb
 from app.services.lunar import get_lunar_info
@@ -81,6 +82,17 @@ class DailyInsightResponse(BaseModel):
     solar_term: Optional[str] = Field(None, description="節氣")
     insight: str = Field(..., description="洞察內容")
     model: str = Field(..., description="使用的模型")
+
+
+class ChatRequest(BaseModel):
+    """聊天請求"""
+    message: str = Field(..., description="用戶訊息", min_length=1, max_length=500)
+
+
+class ChatResponse(BaseModel):
+    """聊天回應"""
+    message: str = Field(..., description="AI 回應")
+    data_source: str = Field(default="中央氣象署36年歷史統計(1991-2026)", description="資料來源")
 
 
 # ============================================
@@ -443,3 +455,46 @@ async def get_daily_insight(
             model=response.model,
         )
     )
+
+
+@router.post(
+    "/chat",
+    response_model=ApiResponse[ChatResponse],
+    summary="AI 天氣助手對話",
+    description="使用 Function Calling 查詢歷史資料庫，回答任何天氣相關問題"
+)
+async def chat_with_ai(
+    request: ChatRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    好日子 AI 天氣助手
+
+    可以問的問題類型：
+    - 即時天氣：「台北現在天氣」
+    - 未來預估：「10天後高雄天氣」
+    - 最熱日子：「台北全年最熱哪天」
+    - 最冷日子：「今年最冷是什麼時候」
+    - 最少雨日：「五月哪天最適合出遊」
+    - 月份比較：「7月和8月哪個比較熱」
+
+    所有回答都基於中央氣象署 36 年歷史統計資料。
+    """
+    try:
+        response = await process_with_function_calling(request.message, db)
+        return ApiResponse(
+            success=True,
+            data=ChatResponse(
+                message=response,
+                data_source="中央氣象署36年歷史統計(1991-2026)"
+            )
+        )
+    except Exception as e:
+        print(f"AI 對話失敗: {e}")
+        import traceback
+        traceback.print_exc()
+        return ApiResponse(
+            success=False,
+            data=None,
+            error="AI 服務暫時無法使用，請稍後再試"
+        )
