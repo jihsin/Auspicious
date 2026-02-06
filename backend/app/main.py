@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.api.v1 import weather, stations, lunar, solar_term, proverb, ai, planner, daily_report
+from app.api.v1 import weather, stations, lunar, solar_term, proverb, ai, planner, daily_report, line_webhook
 
 app = FastAPI(
     title="好日子 API",
@@ -79,4 +79,9 @@ app.include_router(
     daily_report.router,
     prefix="/api/v1/daily-report",
     tags=["daily-report"]
+)
+app.include_router(
+    line_webhook.router,
+    prefix="/api/v1/line",
+    tags=["line"]
 )
