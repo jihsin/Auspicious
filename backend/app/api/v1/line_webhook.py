@@ -24,7 +24,8 @@ from google.genai import types
 from app.database import get_db
 from app.services.realtime_weather import fetch_realtime_weather
 from app.services.lunar import get_lunar_info
-from app.models import DailyStatistics
+from app.models import DailyStatistics, Station
+from app.utils.geo import haversine_distance
 
 router = APIRouter()
 
@@ -122,6 +123,75 @@ def clear_history(user_id: str):
     """清除用戶對話歷史"""
     if user_id in CONVERSATION_HISTORY:
         CONVERSATION_HISTORY[user_id]["messages"] = []
+
+
+def find_nearest_station_with_stats(db: Session, lat: float, lon: float) -> dict:
+    """根據 GPS 座標找到最近的有統計資料的氣象站"""
+    stations = db.query(Station).filter(Station.has_statistics == True).all()
+
+    if not stations:
+        return None
+
+    nearest = None
+    min_distance = float("inf")
+
+    for station in stations:
+        if station.latitude and station.longitude:
+            dist = haversine_distance(lat, lon, station.latitude, station.longitude)
+            if dist < min_distance:
+                min_distance = dist
+                nearest = station
+
+    if nearest:
+        return {
+            "station_id": nearest.station_id,
+            "name": nearest.name,
+            "county": nearest.county,
+            "distance_km": round(min_distance, 1)
+        }
+    return None
+
+
+async def get_location_weather(db: Session, lat: float, lon: float, address: str = None) -> str:
+    """根據 GPS 座標取得天氣資訊"""
+    # 找最近的站點
+    nearest = find_nearest_station_with_stats(db, lat, lon)
+
+    if not nearest:
+        return "抱歉，找不到附近的氣象站資料。"
+
+    station_id = nearest["station_id"]
+    station_name = nearest["name"]
+    distance = nearest["distance_km"]
+
+    # 取得今天的統計資料
+    today = datetime.now(TW_TIMEZONE)
+    month_day = today.strftime("%m-%d")
+
+    stats = db.query(DailyStatistics).filter(
+        DailyStatistics.station_id == station_id,
+        DailyStatistics.month_day == month_day
+    ).first()
+
+    if not stats:
+        return f"📍 最近站點：{station_name}（{distance}km）\n\n抱歉，找不到今天的歷史統計資料。"
+
+    # 組合回覆
+    location_str = address if address else f"({lat:.4f}, {lon:.4f})"
+
+    reply = f"""📍 您的位置：{location_str}
+🏢 最近氣象站：{station_name}（{distance} km）
+
+📅 {today.strftime('%m/%d')} 歷史統計（36年平均）：
+🌡 平均溫度：{stats.temp_avg_mean:.1f}°C
+🔺 最高溫：{stats.temp_max_mean:.1f}°C
+🔻 最低溫：{stats.temp_min_mean:.1f}°C
+🌧 降雨機率：{stats.precip_probability * 100:.0f}%
+☀️ 晴天機率：{stats.tendency_sunny * 100:.0f}%
+
+💡 資料來源：中央氣象署 1991-2026 統計"""
+
+    return reply
 
 
 def verify_signature(body: bytes, signature: str) -> bool:
@@ -737,7 +807,9 @@ async def line_webhook(request: Request, db: Session = Depends(get_db)):
 
         if event.get("type") == "message":
             msg = event.get("message", {})
-            if msg.get("type") == "text":
+            msg_type = msg.get("type")
+
+            if msg_type == "text":
                 user_text = msg.get("text", "")
 
                 # 特殊指令：清除對話歷史
@@ -755,17 +827,35 @@ async def line_webhook(request: Request, db: Session = Depends(get_db)):
 
                 await reply_line(reply_token, reply)
 
+            elif msg_type == "location":
+                # 處理位置訊息
+                lat = msg.get("latitude")
+                lon = msg.get("longitude")
+                address = msg.get("address", "")
+
+                try:
+                    reply = await get_location_weather(db, lat, lon, address)
+                except Exception as e:
+                    print(f"位置處理失敗: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    reply = "抱歉，無法取得該位置的天氣資訊。"
+
+                await reply_line(reply_token, reply)
+
         elif event.get("type") == "follow":
             welcome = """👋 嗨！我是「好日子」天氣助手
 
 我可以幫您：
+📍 傳送位置：自動取得最近站點天氣
 🌡 查即時天氣：「台北現在天氣」
 📅 查未來天氣：「10天後高雄天氣」
 🔥 找最熱日子：「台北全年最熱哪天」
 ☀️ 推薦好日子：「五月哪幾天最適合出遊」
 📊 比較月份：「7月和8月哪個比較熱」
 
-所有資料來自中央氣象署 36 年歷史統計！"""
+💡 試試傳送您的位置，我會找最近的氣象站！
+📊 資料來自中央氣象署 36 年歷史統計"""
             await reply_line(reply_token, welcome)
 
     return {"status": "ok"}
