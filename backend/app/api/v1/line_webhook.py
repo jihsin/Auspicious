@@ -53,6 +53,46 @@ STATS_STATIONS = {
 
 SUPPORTED_CITIES = list(set(REALTIME_STATIONS.keys()))
 
+# ============ 對話歷史管理 ============
+# 簡易內存儲存（生產環境應用 Redis）
+from collections import defaultdict
+import time
+
+# 結構: {user_id: {"messages": [...], "last_active": timestamp}}
+CONVERSATION_HISTORY = defaultdict(lambda: {"messages": [], "last_active": 0})
+MAX_HISTORY_LENGTH = 10  # 保留最近 10 輪對話
+HISTORY_EXPIRE_SECONDS = 600  # 10 分鐘無活動則清除
+
+
+def get_conversation_history(user_id: str) -> list:
+    """取得用戶對話歷史"""
+    now = time.time()
+    history = CONVERSATION_HISTORY[user_id]
+
+    # 檢查是否過期
+    if history["last_active"] > 0 and (now - history["last_active"]) > HISTORY_EXPIRE_SECONDS:
+        history["messages"] = []
+
+    history["last_active"] = now
+    return history["messages"]
+
+
+def add_to_history(user_id: str, role: str, content: str):
+    """添加訊息到對話歷史"""
+    history = CONVERSATION_HISTORY[user_id]
+    history["messages"].append({"role": role, "content": content})
+    history["last_active"] = time.time()
+
+    # 保持歷史長度限制
+    if len(history["messages"]) > MAX_HISTORY_LENGTH * 2:
+        history["messages"] = history["messages"][-MAX_HISTORY_LENGTH * 2:]
+
+
+def clear_history(user_id: str):
+    """清除用戶對話歷史"""
+    if user_id in CONVERSATION_HISTORY:
+        CONVERSATION_HISTORY[user_id]["messages"] = []
+
 
 def verify_signature(body: bytes, signature: str) -> bool:
     if not LINE_CHANNEL_SECRET:
@@ -304,6 +344,78 @@ class WeatherTools:
 
         return result
 
+    def get_days_above_temperature(self, city: str, threshold: float, month: Optional[int] = None) -> dict:
+        """查詢平均最高溫超過指定溫度的所有日期"""
+        station_id = STATS_STATIONS.get(city, "466920")
+        query = self.db.query(DailyStatistics).filter(
+            DailyStatistics.station_id == station_id,
+            DailyStatistics.temp_max_mean >= threshold
+        )
+
+        if month:
+            query = query.filter(DailyStatistics.month_day.like(f"{month:02d}-%"))
+
+        results = query.order_by(DailyStatistics.temp_max_mean.desc()).all()
+
+        if not results:
+            return {"error": f"找不到 {city} 平均最高溫超過 {threshold}°C 的日期"}
+
+        # 按月份分組統計
+        by_month = {}
+        for r in results:
+            m = int(r.month_day.split("-")[0])
+            if m not in by_month:
+                by_month[m] = []
+            by_month[m].append({
+                "date": r.month_day,
+                "avg_max_temp": round(r.temp_max_mean, 1)
+            })
+
+        return {
+            "city": city,
+            "threshold": threshold,
+            "total_days": len(results),
+            "by_month": {f"{m}月": {"count": len(days), "dates": days[:5]} for m, days in sorted(by_month.items())},
+            "hottest_days": [{"date": r.month_day, "avg_max_temp": round(r.temp_max_mean, 1)} for r in results[:10]],
+            "data_source": "中央氣象署36年歷史統計(1991-2026)"
+        }
+
+    def get_days_below_temperature(self, city: str, threshold: float, month: Optional[int] = None) -> dict:
+        """查詢平均最低溫低於指定溫度的所有日期"""
+        station_id = STATS_STATIONS.get(city, "466920")
+        query = self.db.query(DailyStatistics).filter(
+            DailyStatistics.station_id == station_id,
+            DailyStatistics.temp_min_mean <= threshold
+        )
+
+        if month:
+            query = query.filter(DailyStatistics.month_day.like(f"{month:02d}-%"))
+
+        results = query.order_by(DailyStatistics.temp_min_mean.asc()).all()
+
+        if not results:
+            return {"error": f"找不到 {city} 平均最低溫低於 {threshold}°C 的日期"}
+
+        # 按月份分組統計
+        by_month = {}
+        for r in results:
+            m = int(r.month_day.split("-")[0])
+            if m not in by_month:
+                by_month[m] = []
+            by_month[m].append({
+                "date": r.month_day,
+                "avg_min_temp": round(r.temp_min_mean, 1)
+            })
+
+        return {
+            "city": city,
+            "threshold": threshold,
+            "total_days": len(results),
+            "by_month": {f"{m}月": {"count": len(days), "dates": days[:5]} for m, days in sorted(by_month.items())},
+            "coldest_days": [{"date": r.month_day, "avg_min_temp": round(r.temp_min_mean, 1)} for r in results[:10]],
+            "data_source": "中央氣象署36年歷史統計(1991-2026)"
+        }
+
 
 # ============ Function Calling 定義 ============
 
@@ -411,11 +523,37 @@ WEATHER_TOOLS = [
             "required": ["city", "month1", "month2"]
         }
     ),
+    types.FunctionDeclaration(
+        name="get_days_above_temperature",
+        description="查詢平均最高溫超過指定溫度的所有日期，例如「哪些天超過33度」「氣溫高過30度的日子」",
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "city": {"type": "string", "description": "城市名稱"},
+                "threshold": {"type": "number", "description": "溫度閾值（攝氏度），例如 33 表示查詢超過 33°C 的日期"},
+                "month": {"type": "integer", "description": "限定月份(1-12)，不指定則查全年"}
+            },
+            "required": ["city", "threshold"]
+        }
+    ),
+    types.FunctionDeclaration(
+        name="get_days_below_temperature",
+        description="查詢平均最低溫低於指定溫度的所有日期，例如「哪些天低於10度」「氣溫低於15度的日子」",
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "city": {"type": "string", "description": "城市名稱"},
+                "threshold": {"type": "number", "description": "溫度閾值（攝氏度），例如 10 表示查詢低於 10°C 的日期"},
+                "month": {"type": "integer", "description": "限定月份(1-12)，不指定則查全年"}
+            },
+            "required": ["city", "threshold"]
+        }
+    ),
 ]
 
 
-async def process_with_function_calling(user_message: str, db: Session) -> str:
-    """使用 Function Calling 處理用戶查詢"""
+async def process_with_function_calling(user_message: str, db: Session, user_id: str = "default") -> str:
+    """使用 Function Calling 處理用戶查詢（支援多輪對話）"""
 
     client = genai.Client(api_key=GEMINI_API_KEY)
     tools = WeatherTools(db)
@@ -424,28 +562,47 @@ async def process_with_function_calling(user_message: str, db: Session) -> str:
     system_instruction = f"""你是「好日子」天氣助手。今天是 {today.strftime('%Y-%m-%d')}（星期{['一','二','三','四','五','六','日'][today.weekday()]}）。
 
 核心理念：
-我們使用中央氣象署 36 年歷史統計資料來「預估」未來天氣。當用戶問「2026年最熱哪天」或「明年最冷什麼時候」，我們用歷史上該日期的平均值來預估。
+我們使用中央氣象署 36 年歷史統計資料來「預估」未來天氣。
 
 重要規則：
 1. 你只能使用提供的工具函數來查詢天氣資料
 2. 絕對不可以編造任何數據，所有數字都必須來自工具查詢結果
 3. 回答要簡潔（100字內）、友善、適度使用 emoji
-4. 提到數據時，說明這是「36年歷史統計預估」
+4. 提到數據時，說明這是「36年歷史統計」
+5. **注意對話上下文**：用戶可能在前面的對話中提到城市或日期，請結合上下文理解
 
 問題對應工具：
-- 「2026年/今年/明年最熱哪天」→ 用 get_hottest_days 查歷史最熱日期
-- 「2026年/今年/明年最冷哪天」→ 用 get_coldest_days 查歷史最冷日期
-- 「五月最適合出遊」→ 用 get_driest_days 查降雨機率最低
-- 「X天後天氣」→ 用 get_future_date_stats 查該日期歷史統計
+- 「最熱哪天」→ get_hottest_days
+- 「最冷哪天」→ get_coldest_days
+- 「超過X度」「高過X度」→ get_days_above_temperature
+- 「低於X度」「冷過X度」→ get_days_below_temperature
+- 「降雨機率」「會下雨嗎」→ get_date_statistics（查 rain_probability）
+- 「最少雨/適合出遊」→ get_driest_days
+- 「X天後天氣」→ get_future_date_stats
+- 「X月和Y月比較」→ compare_months
 
 支援的城市：{', '.join(SUPPORTED_CITIES)}"""
 
     tool_config = types.Tool(function_declarations=WEATHER_TOOLS)
 
+    # 獲取對話歷史
+    history = get_conversation_history(user_id)
+
+    # 構建對話內容（包含歷史）
+    contents = []
+    for msg in history:
+        if msg["role"] == "user":
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=msg["content"])]))
+        else:
+            contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg["content"])]))
+
+    # 添加當前訊息
+    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_message)]))
+
     # 第一次請求：讓 AI 決定要調用什麼工具
     response = client.models.generate_content(
         model="gemini-2.0-flash",
-        contents=user_message,
+        contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=[tool_config],
@@ -455,10 +612,12 @@ async def process_with_function_calling(user_message: str, db: Session) -> str:
 
     # 檢查是否有 function call
     if not response.function_calls:
-        # 沒有 function call，可能是閒聊
-        if response.text:
-            return response.text
-        return "您好！我是好日子天氣助手，可以幫您查詢即時天氣、歷史統計、推薦好日子等。請問有什麼我可以幫您的？"
+        # 沒有 function call，可能是閒聊或需要更多資訊
+        reply = response.text if response.text else "您好！我是好日子天氣助手，可以幫您查詢即時天氣、歷史統計、推薦好日子等。請問有什麼我可以幫您的？"
+        # 保存對話歷史
+        add_to_history(user_id, "user", user_message)
+        add_to_history(user_id, "assistant", reply)
+        return reply
 
     # 執行所有 function calls
     function_responses = []
@@ -485,6 +644,10 @@ async def process_with_function_calling(user_message: str, db: Session) -> str:
             result = tools.get_rainiest_days(**func_args)
         elif func_name == "compare_months":
             result = tools.compare_months(**func_args)
+        elif func_name == "get_days_above_temperature":
+            result = tools.get_days_above_temperature(**func_args)
+        elif func_name == "get_days_below_temperature":
+            result = tools.get_days_below_temperature(**func_args)
         else:
             result = {"error": f"未知的工具: {func_name}"}
 
@@ -497,21 +660,27 @@ async def process_with_function_calling(user_message: str, db: Session) -> str:
             )
         )
 
-    # 第二次請求：讓 AI 根據工具結果生成回覆
+    # 第二次請求：讓 AI 根據工具結果生成回覆（包含對話歷史）
+    final_contents = contents.copy()  # 包含歷史對話
+    final_contents.append(response.candidates[0].content)  # AI 的 function call
+    final_contents.append(types.Content(role="tool", parts=function_responses))  # 工具結果
+
     final_response = client.models.generate_content(
         model="gemini-2.0-flash",
-        contents=[
-            types.Content(role="user", parts=[types.Part.from_text(text=user_message)]),
-            response.candidates[0].content,  # AI 的 function call
-            types.Content(role="tool", parts=function_responses)  # 工具結果
-        ],
+        contents=final_contents,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=[tool_config]
         )
     )
 
-    return final_response.text.strip() if final_response.text else "抱歉，無法生成回覆。"
+    reply = final_response.text.strip() if final_response.text else "抱歉，無法生成回覆。"
+
+    # 保存對話歷史
+    add_to_history(user_id, "user", user_message)
+    add_to_history(user_id, "assistant", reply)
+
+    return reply
 
 
 @router.post("/webhook")
@@ -532,18 +701,27 @@ async def line_webhook(request: Request, db: Session = Depends(get_db)):
         if not reply_token:
             continue
 
+        # 取得用戶 ID（用於對話歷史）
+        source = event.get("source", {})
+        user_id = source.get("userId", "unknown")
+
         if event.get("type") == "message":
             msg = event.get("message", {})
             if msg.get("type") == "text":
                 user_text = msg.get("text", "")
 
-                try:
-                    reply = await process_with_function_calling(user_text, db)
-                except Exception as e:
-                    print(f"處理失敗: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    reply = "抱歉，系統忙碌中，請稍後再試。"
+                # 特殊指令：清除對話歷史
+                if user_text.strip().lower() in ["清除", "重新開始", "reset", "clear"]:
+                    clear_history(user_id)
+                    reply = "對話已重新開始！請問有什麼我可以幫您的？"
+                else:
+                    try:
+                        reply = await process_with_function_calling(user_text, db, user_id)
+                    except Exception as e:
+                        print(f"處理失敗: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        reply = "抱歉，系統忙碌中，請稍後再試。"
 
                 await reply_line(reply_token, reply)
 
