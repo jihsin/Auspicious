@@ -9,6 +9,7 @@
 """
 
 import os
+import asyncio
 from datetime import date
 from typing import Optional
 from dataclasses import dataclass
@@ -16,6 +17,16 @@ import json
 
 import google.generativeai as genai
 from google.generativeai.types import GenerateContentResponse
+
+# 延遲導入避免循環依賴
+_notification_module = None
+
+def _get_notification_module():
+    global _notification_module
+    if _notification_module is None:
+        from app.services import notification
+        _notification_module = notification
+    return _notification_module
 
 
 # ============================================
@@ -298,7 +309,14 @@ def generate_solar_term_insight(
                 model=MODEL_NAME,
             )
     except Exception as e:
-        print(f"生成節氣解讀失敗: {e}")
+        error_msg = str(e)
+        print(f"生成節氣解讀失敗: {error_msg}")
+        # 檢查是否為 API 密鑰問題
+        if "API_KEY" in error_msg.upper() or "QUOTA" in error_msg.upper() or "401" in error_msg or "403" in error_msg:
+            notification = _get_notification_module()
+            asyncio.create_task(
+                notification.notify_api_key_expired("Gemini AI", error_msg[:200])
+            )
 
     return None
 

@@ -4,10 +4,12 @@
 """
 
 import httpx
+import asyncio
 from typing import Optional
 from datetime import datetime
 
 from app.config import settings
+from app.services.notification import notify_api_key_expired
 
 
 # CWA API 端點
@@ -163,6 +165,16 @@ async def fetch_realtime_weather(station_id: str) -> Optional[RealtimeWeatherDat
             sunshine_hours=parse_weather_element(elements, "SunshineDuration"),
         )
 
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            print(f"CWA API 認證失敗 (401): API 密鑰可能已失效")
+            # 非同步發送通知
+            asyncio.create_task(
+                notify_api_key_expired("CWA OpenData", "401 Forbidden - API 密鑰已失效或不正確")
+            )
+        else:
+            print(f"CWA API HTTP 錯誤: {e.response.status_code}")
+        return None
     except Exception as e:
         print(f"Error fetching realtime weather: {e}")
         return None
@@ -211,6 +223,15 @@ async def fetch_all_realtime_weather() -> list[RealtimeWeatherData]:
 
         return results
 
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            print(f"CWA API 認證失敗 (401): API 密鑰可能已失效")
+            asyncio.create_task(
+                notify_api_key_expired("CWA OpenData", "401 Forbidden - API 密鑰已失效或不正確")
+            )
+        else:
+            print(f"CWA API HTTP 錯誤: {e.response.status_code}")
+        return []
     except Exception as e:
         print(f"Error fetching all realtime weather: {e}")
         return []
