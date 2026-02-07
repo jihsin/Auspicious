@@ -1,8 +1,11 @@
 # backend/app/api/v1/weather.py
 """天氣查詢 API 路由"""
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional, List
+
+# 台灣時區 (UTC+8)
+TW_TIMEZONE = timezone(timedelta(hours=8))
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -73,7 +76,7 @@ def _get_lunar_info_for_date(month_day: str) -> dict:
     Returns:
         農曆資訊字典，包含 lunar_date, yi_ji, jieqi
     """
-    today = datetime.now()
+    today = datetime.now(TW_TIMEZONE)
     month, day = map(int, month_day.split("-"))
 
     # 處理閏年問題：先用當年，如果失敗則用閏年 2000
@@ -243,7 +246,7 @@ async def get_today_statistics(
         404: 找不到指定站點的統計資料
     """
     # 取得今日日期
-    today = datetime.now()
+    today = datetime.now(TW_TIMEZONE)
     month_day = today.strftime("%m-%d")
 
     # 驗證站點
@@ -846,7 +849,7 @@ async def compare_with_historical(
     station_info = _get_station_info(station_id, db)
 
     # 取得今日日期
-    today = datetime.now()
+    today = datetime.now(TW_TIMEZONE)
     month_day = today.strftime("%m-%d")
 
     # 查詢歷史統計資料

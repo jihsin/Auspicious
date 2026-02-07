@@ -6,7 +6,10 @@
 import httpx
 import asyncio
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# 台灣時區 (UTC+8)
+TW_TIMEZONE = timezone(timedelta(hours=8))
 
 from app.config import settings
 from app.services.notification import notify_api_key_expired
@@ -144,7 +147,7 @@ async def fetch_realtime_weather(station_id: str) -> Optional[RealtimeWeatherDat
 
         station = stations[0]
         obs_time_str = station.get("ObsTime", {}).get("DateTime")
-        obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now()
+        obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now(TW_TIMEZONE)
 
         elements = station.get("WeatherElement", {})
 
@@ -202,7 +205,7 @@ async def fetch_all_realtime_weather() -> list[RealtimeWeatherData]:
 
         for station in stations:
             obs_time_str = station.get("ObsTime", {}).get("DateTime")
-            obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now()
+            obs_time = datetime.fromisoformat(obs_time_str) if obs_time_str else datetime.now(TW_TIMEZONE)
 
             elements = station.get("WeatherElement", {})
             weather = elements.get("Weather")

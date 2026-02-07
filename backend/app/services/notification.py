@@ -7,8 +7,11 @@
 
 import os
 import httpx
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+
+# 台灣時區 (UTC+8)
+TW_TIMEZONE = timezone(timedelta(hours=8))
 
 
 # LINE Messaging API 設定
@@ -26,12 +29,12 @@ def _can_send_notification(notification_type: str) -> bool:
     last_time = _last_notification_time.get(notification_type)
     if last_time is None:
         return True
-    return datetime.now() - last_time > NOTIFICATION_COOLDOWN
+    return datetime.now(TW_TIMEZONE) - last_time > NOTIFICATION_COOLDOWN
 
 
 def _record_notification(notification_type: str):
     """記錄通知發送時間"""
-    _last_notification_time[notification_type] = datetime.now()
+    _last_notification_time[notification_type] = datetime.now(TW_TIMEZONE)
 
 
 async def send_line_message(message: str) -> bool:
@@ -95,7 +98,7 @@ async def notify_api_key_expired(api_name: str, error_message: str) -> bool:
     message = f"""🚨 API 密鑰失效警報
 
 📛 API：{api_name}
-⏰ 時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+⏰ 時間：{datetime.now(TW_TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}
 ❌ 錯誤：{error_message}
 
 請盡快更新 API 密鑰：
@@ -130,7 +133,7 @@ async def notify_system_error(error_type: str, error_message: str, details: Opti
     message = f"""⚠️ 系統錯誤警報
 
 📛 類型：{error_type}
-⏰ 時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+⏰ 時間：{datetime.now(TW_TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')}
 ❌ 錯誤：{error_message}"""
 
     if details:
@@ -153,7 +156,7 @@ async def notify_daily_summary(stats: dict) -> bool:
     """
     message = f"""📊 好日子每日摘要
 
-📅 日期：{datetime.now().strftime('%Y-%m-%d')}
+📅 日期：{datetime.now(TW_TIMEZONE).strftime('%Y-%m-%d')}
 🌡️ 臺北即時：{stats.get('taipei_temp', 'N/A')}°C
 📈 API 呼叫：{stats.get('api_calls', 0)} 次
 ✅ 系統狀態：正常"""

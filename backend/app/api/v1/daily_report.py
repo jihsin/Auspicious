@@ -4,8 +4,11 @@
 用於 Cloud Scheduler 觸發的每日 LINE 報告。
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
+
+# 台灣時區 (UTC+8)
+TW_TIMEZONE = timezone(timedelta(hours=8))
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -22,7 +25,7 @@ router = APIRouter()
 
 async def generate_daily_report(station_id: str, db: Session) -> str:
     """生成每日報告內容"""
-    today = datetime.now()
+    today = datetime.now(TW_TIMEZONE)
     month_day = today.strftime("%m-%d")
 
     # 取得即時天氣
@@ -164,7 +167,7 @@ async def send_daily_report(
             data={
                 "sent": success,
                 "station_id": station_id,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now(TW_TIMEZONE).isoformat()
             },
             error=None if success else "LINE 訊息發送失敗"
         )
@@ -194,7 +197,7 @@ async def preview_daily_report(
             data={
                 "message": message,
                 "station_id": station_id,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now(TW_TIMEZONE).isoformat()
             }
         )
     except Exception as e:
