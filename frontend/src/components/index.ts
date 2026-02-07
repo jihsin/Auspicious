@@ -14,3 +14,4 @@ export {
 export { HistoricalCompareCard } from "./HistoricalCompareCard";
 export { SolarTermCard } from "./SolarTermCard";
 export { ActivityPlannerCard } from "./ActivityPlannerCard";
+export { AIChatCard } from "./AIChatCard";

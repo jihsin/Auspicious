@@ -151,6 +151,13 @@ export default function Home() {
         {/* 功能連結 */}
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <span className="text-xl">🤖</span>
+            <span className="font-medium">AI 天氣助手</span>
+          </Link>
+          <Link
             href="/planner"
             className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
           >

@@ -471,3 +471,35 @@ export async function fetchQuickPlan(
   );
   return handleResponse<PlannerResult>(response);
 }
+
+// ============================================
+// AI Chat API
+// ============================================
+
+export interface ChatResponse {
+  message: string;
+  data_source: string;
+}
+
+/**
+ * 與 AI 天氣助手對話
+ *
+ * @param message - 用戶訊息
+ * @returns AI 回覆
+ * @throws ApiError 當 API 請求失敗時
+ *
+ * @example
+ * const result = await sendChatMessage("台北今天會下雨嗎");
+ * console.log(result.message);
+ */
+export async function sendChatMessage(message: string): Promise<ChatResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/ai/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message }),
+  });
+
+  return handleResponse<ChatResponse>(response);
+}
