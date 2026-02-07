@@ -55,13 +55,15 @@ async def generate_daily_report(station_id: str, db: Session) -> str:
         weather = realtime.weather or "未知"
         obs_time = realtime.obs_time.strftime("%H:%M") if realtime.obs_time else ""
         humidity = realtime.humidity
-        precipitation = realtime.precipitation or 0
+        # 處理無效降雨量（CWA API 用負數表示缺失資料）
+        raw_precip = realtime.precipitation
+        precipitation = raw_precip if raw_precip is not None and raw_precip >= 0 else None
     else:
         temp = temp_max = temp_min = "N/A"
         weather = "無法取得"
         obs_time = ""
         humidity = None
-        precipitation = 0
+        precipitation = None
 
     # 歷史統計
     hist_avg = round(stats.temp_avg_mean, 1) if stats and stats.temp_avg_mean else "N/A"
@@ -110,6 +112,9 @@ async def generate_daily_report(station_id: str, db: Session) -> str:
     # 濕度
     humidity_str = f"{round(humidity)}%" if humidity else "N/A"
 
+    # 累積雨量顯示
+    precip_str = f"{precipitation}mm" if precipitation is not None else "--"
+
     # 組合訊息
     message = f"""🌤 好日子 - 每日天氣報告
 
@@ -123,7 +128,7 @@ async def generate_daily_report(station_id: str, db: Session) -> str:
 • 氣溫：{temp}°C
 • 今日高低：{temp_min}°C ~ {temp_max}°C
 • 濕度：{humidity_str}
-• 累積雨量：{precipitation}mm
+• 累積雨量：{precip_str}
 
 ━━━━━━━━━━━━━━━━
 🌧 降雨參考
