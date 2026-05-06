@@ -34,7 +34,7 @@ def match_label(ctx: dict) -> dict:
         return {"text": "節氣轉換點", "category": "solar_term"}
 
     # 季節典型
-    if m in (5, 6) and p >= 0.55:
+    if m in (5, 6) and p >= 0.50:
         return {"text": "典型梅雨日", "category": "seasonal"}
     if m in (7, 8) and p >= 0.45 and tz >= 1:
         return {"text": "盛夏雷雨日", "category": "seasonal"}

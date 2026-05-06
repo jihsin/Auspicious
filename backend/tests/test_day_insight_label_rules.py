@@ -4,7 +4,7 @@ from app.services.day_insight.label_rules import match_label
 def _ctx(**kwargs):
     base = {
         "month": 6, "day": 15,
-        "precip_probability": 0.52,
+        "precip_probability": 0.40,    # was 0.52; must be < 0.50 so meiyu rule does NOT trigger
         "anomaly_year": 0.08, "anomaly_month": 0.02,
         "temp_z": 0.5, "precip_z_in_month": 0.5,
         "is_solar_term_day": False,
