@@ -332,12 +332,15 @@ export const fetchDayInterpretation = (
 
 ## 附錄 A：與起卦功能的關係
 
-起卦功能（先前討論的「上卦=今日 / 下卦=歷史」反差設計）獨立成另一個設計階段。本卡片完成後，可考慮：
+起卦功能已於同日獨立 spec 化：[2026-05-06-divination-drawer-design.md](./2026-05-06-divination-drawer-design.md)。
 
-- 將起卦結果作為第四層加在 DayInsightCard 中（或獨立卡片）
-- AI 詮釋 prompt 可預留「卦象」語境，讓詮釋本身帶古典美學
+整合方式：起卦作為本 spec §10「點擊看詳細詮釋」抽屜的展開內容（不是獨立卡片）。本 spec 的 P3「AI 詮釋 endpoint + 點擊展開」階段直接套用 divination spec 定義的卦象結構與 narrative。
 
-但這些都是後續迭代，不在本 spec scope 內。
+兩 spec 共用：
+- 同一個 `/day-insight/{station}/{month}/{day}/interpretation` endpoint
+- 同一份 daily_statistics + raw_observations 資料
+- 同一個 ai_engine Gemini client
+- 同一個變爻門檻 \|z_score\| ≥ 1（與本 spec §6.5 副 badge 門檻保持一致）
 
 ## 附錄 B：相關 bug 修復
 
