@@ -34,6 +34,10 @@ def _compute_one_dim(values: list[float], current: float, metric: str, unit: str
 
 
 def _month_values(db: Session, station_id: str, month: int, attr: str) -> list[float]:
+    # NOTE: includes the target month_day itself in the sample (consistent with
+    # T2 compute_anomaly which uses func.avg over all same-station rows). With
+    # ~28-31 rows per month in production, the inclusive-self bias on z-score
+    # is < 5%; deliberate consistency choice over statistical purity.
     rows = db.query(DailyStatistics).filter(
         DailyStatistics.station_id == station_id,
         DailyStatistics.month_day.like(f"{month:02d}-%"),
