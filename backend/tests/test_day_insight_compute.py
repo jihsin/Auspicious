@@ -42,3 +42,20 @@ def test_compute_anomaly_returns_dual_baseline(db):
 
 def test_compute_anomaly_returns_none_when_missing(db):
     assert compute_anomaly(db, station_id="X", month=12, day=25) is None
+
+
+def test_compute_anomaly_returns_none_when_precip_is_null(db):
+    db.add(DailyStatistics(station_id="X", month_day="07-01",
+                           precip_probability=None,
+                           years_analyzed=10, start_year=2010, end_year=2019))
+    db.commit()
+    assert compute_anomaly(db, station_id="X", month=7, day=1) is None
+
+
+def test_compute_anomaly_returns_none_when_all_means_null(db):
+    # New station Y where every precip_probability is NULL
+    db.add(DailyStatistics(station_id="Y", month_day="06-15",
+                           precip_probability=None,
+                           years_analyzed=10, start_year=2010, end_year=2019))
+    db.commit()
+    assert compute_anomaly(db, station_id="Y", month=6, day=15) is None

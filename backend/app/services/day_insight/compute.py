@@ -24,6 +24,9 @@ def compute_anomaly(db: Session, station_id: str, month: int, day: int) -> dict 
         .filter(DailyStatistics.month_day.like(month_pattern)) \
         .scalar()
 
+    if year_mean is None or month_mean is None:
+        return None
+
     return {
         "value": float(day_stat.precip_probability),
         "anomaly_year": float(day_stat.precip_probability - year_mean),
