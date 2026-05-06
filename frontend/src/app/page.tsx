@@ -9,8 +9,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { WeatherCard, StationSelector, LunarCard } from "@/components";
+import { DayInsightCard } from "@/components/DayInsightCard";
 import { fetchTodayWeather } from "@/lib/api";
 import { DailyWeatherData, ApiError, StationInfoExtended } from "@/lib/types";
+
+// 今日日期
+const today = new Date();
 
 // 預設站點：臺北
 const DEFAULT_STATION: StationInfoExtended = {
@@ -144,6 +148,17 @@ export default function Home() {
               lunarDate={data.lunar_date}
               yiJi={data.yi_ji}
               jieqi={data.jieqi}
+            />
+          </div>
+        )}
+
+        {/* 今日洞察 */}
+        {currentStation && !loading && !error && (
+          <div className="mt-6 w-full max-w-md">
+            <DayInsightCard
+              stationId={currentStation.station_id}
+              month={today.getMonth() + 1}
+              day={today.getDate()}
             />
           </div>
         )}

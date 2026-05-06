@@ -6,6 +6,7 @@ from typing import Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import ExtremeRecord
 from app.schemas.lunar import LunarDateInfo, YiJiInfo
 
 T = TypeVar("T")
@@ -266,13 +267,6 @@ class RealtimeWeatherInfo(BaseModel):
 
 
 # ===== Phase 3.1 年代分層統計 Schema =====
-
-class ExtremeRecord(BaseModel):
-    """極值紀錄（含年份）"""
-
-    value: float = Field(..., description="極值數值")
-    year: int = Field(..., description="發生年份")
-
 
 class ExtremeRecords(BaseModel):
     """歷史極值紀錄"""

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchCompareStations, fetchStationsExtended } from "@/lib/api";
 import { StationInfoExtended, CompareResponse } from "@/lib/types";
 import { ComparisonCard, StationCompareChart } from "@/components";
+import { DayInsightCard } from "@/components/DayInsightCard";
 
 // 預設月份和日期
 const today = new Date();
@@ -224,6 +225,18 @@ export default function ComparePage() {
                 metric="temp_avg"
                 height={200}
               />
+            </div>
+
+            {/* 每站日洞察 */}
+            <div className="mt-6 space-y-4">
+              {selectedStations.map((stationId) => (
+                <DayInsightCard
+                  key={stationId}
+                  stationId={stationId}
+                  month={selectedMonth}
+                  day={selectedDay}
+                />
+              ))}
             </div>
           </>
         )}

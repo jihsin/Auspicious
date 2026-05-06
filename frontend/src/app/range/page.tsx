@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fetchDateRange, fetchStationsExtended } from "@/lib/api";
 import { StationInfoExtended, DateRangeResponse } from "@/lib/types";
 import { TemperatureChart, PrecipChart } from "@/components";
+import { DayInsightCard } from "@/components/DayInsightCard";
 
 // 預設日期範圍（今日前後 7 天）
 const today = new Date();
@@ -243,6 +244,21 @@ export default function RangePage() {
 
             {/* 降雨與晴天機率圖 */}
             <PrecipChart data={result.days} height={220} />
+
+            {/* 每日洞察 */}
+            <div className="space-y-4">
+              {result.days.map((day) => {
+                const [mm, dd] = day.month_day.split("-");
+                return (
+                  <DayInsightCard
+                    key={day.month_day}
+                    stationId={selectedStation}
+                    month={parseInt(mm, 10)}
+                    day={parseInt(dd, 10)}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
 

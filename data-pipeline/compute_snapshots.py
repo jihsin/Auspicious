@@ -148,6 +148,12 @@ def compute_and_save_statistics(
                 record.temp_min_mean = temp["min_stats"].get("mean")
                 record.temp_min_record = temp["min_stats"].get("min")
 
+        # 濕度統計
+        if "humidity" in stats:
+            humidity = stats["humidity"]
+            record.humidity_avg_mean = humidity.get("mean")
+            record.humidity_avg_stddev = humidity.get("std_dev")
+
         # 降水統計
         if "precipitation" in stats:
             precip = stats["precipitation"]
@@ -228,8 +234,14 @@ def verify_statistics(db_path: Path, station_id: str) -> None:
             ).first()
 
             if stat:
+                humidity_str = (
+                    f"{stat.humidity_avg_mean:.1f}%"
+                    if stat.humidity_avg_mean is not None
+                    else "N/A"
+                )
                 print(f"  {month_day}: 平均溫度={stat.temp_avg_mean:.1f}°C, "
                       f"降雨機率={stat.precip_probability:.1%}, "
+                      f"濕度均值={humidity_str}, "
                       f"晴天={stat.tendency_sunny:.1%}")
             else:
                 print(f"  {month_day}: 無資料")
