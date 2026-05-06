@@ -33,3 +33,6 @@ data/processed/
 # OS
 .DS_Store
 Thumbs.db
+
+# Playwright runtime artifacts (auto-generated yml/log/png from MCP browser tools)
+.playwright-mcp/
