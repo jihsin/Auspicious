@@ -27,7 +27,7 @@ echo "資料庫已複製到 backend/auspicious.db"
 echo ""
 echo ">>> 步驟 2: 建構 Docker image..."
 cd backend
-docker build -t ${IMAGE_NAME}:latest .
+docker build --platform linux/amd64 -t ${IMAGE_NAME}:latest .
 
 # 清理複製的資料庫
 rm -f auspicious.db
