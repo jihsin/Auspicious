@@ -162,12 +162,12 @@ def _statistics_to_response(
     description="根據站點代碼和日期（MM-DD 格式）查詢歷史天氣統計資料"
 )
 async def get_daily_statistics(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
     month_day: str = Path(
         ...,
         pattern=r"^\d{2}-\d{2}$",
         description="日期 (MM-DD 格式)",
-        example="02-04"
+        examples=["02-04"]
     ),
     db: Session = Depends(get_db)
 ) -> ApiResponse[DailyWeatherResponse]:
@@ -228,7 +228,7 @@ async def get_daily_statistics(
     description="根據站點代碼查詢今日對應日期的歷史天氣統計資料"
 )
 async def get_today_statistics(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
     db: Session = Depends(get_db)
 ) -> ApiResponse[DailyWeatherResponse]:
     """查詢今日的歷史天氣統計
@@ -319,18 +319,18 @@ def _generate_date_range(start: str, end: str) -> List[str]:
     description="根據站點代碼和日期範圍查詢歷史天氣統計資料"
 )
 async def get_range_statistics(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
     start: str = Query(
         ...,
         pattern=r"^\d{2}-\d{2}$",
         description="起始日期 (MM-DD 格式)",
-        example="03-01"
+        examples=["03-01"]
     ),
     end: str = Query(
         ...,
         pattern=r"^\d{2}-\d{2}$",
         description="結束日期 (MM-DD 格式)",
-        example="03-15"
+        examples=["03-15"]
     ),
     db: Session = Depends(get_db)
 ) -> ApiResponse[DateRangeResponse]:
@@ -544,14 +544,14 @@ def _calculate_recommendation_score(
     description="根據站點和偏好推薦指定月份的最佳日期"
 )
 async def get_best_dates(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
-    month: int = Query(..., ge=1, le=12, description="月份 (1-12)", example=3),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
+    month: int = Query(..., ge=1, le=12, description="月份 (1-12)", examples=[3]),
     preference: str = Query(
         "sunny",
         description="偏好類型: sunny(晴天), mild(溫和), cool(涼爽), outdoor(戶外), wedding(婚禮)",
-        example="sunny"
+        examples=["sunny"]
     ),
-    limit: int = Query(5, ge=1, le=10, description="推薦數量 (1-10)", example=5),
+    limit: int = Query(5, ge=1, le=10, description="推薦數量 (1-10)", examples=[5]),
     db: Session = Depends(get_db)
 ) -> ApiResponse[BestDatesResponse]:
     """推薦最佳日期
@@ -658,13 +658,13 @@ async def compare_stations(
     stations: str = Query(
         ...,
         description="站點代碼列表，以逗號分隔 (最多 5 個)",
-        example="466920,467490,467441"
+        examples=["466920,467490,467441"]
     ),
     date: str = Query(
         ...,
         pattern=r"^\d{2}-\d{2}$",
         description="比較日期 (MM-DD 格式)",
-        example="03-15"
+        examples=["03-15"]
     ),
     db: Session = Depends(get_db)
 ) -> ApiResponse[CompareResponse]:
@@ -831,7 +831,7 @@ def _generate_summary(comparisons: list[HistoricalComparison]) -> str:
     description="比較今日即時天氣與歷史統計平均"
 )
 async def compare_with_historical(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
     db: Session = Depends(get_db)
 ) -> ApiResponse[HistoricalCompareResponse]:
     """歷史同期比較
@@ -1022,12 +1022,12 @@ async def compare_with_historical(
     description="取得指定日期的年代分層統計，展示氣候變遷趨勢"
 )
 async def get_decade_statistics(
-    station_id: str = Path(..., description="氣象站代碼", example="466920"),
+    station_id: str = Path(..., description="氣象站代碼", examples=["466920"]),
     month_day: str = Path(
         ...,
         pattern=r"^\d{2}-\d{2}$",
         description="日期 (MM-DD 格式)",
-        example="02-05"
+        examples=["02-05"]
     ),
     db: Session = Depends(get_db)
 ):

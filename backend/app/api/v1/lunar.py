@@ -24,7 +24,7 @@ async def get_lunar(
         None,
         alias="date",
         description="公曆日期 (YYYY-MM-DD 格式)，預設為今天",
-        example="2026-02-04"
+        examples=["2026-02-04"]
     )
 ) -> ApiResponse[LunarResponse]:
     """取得農曆資訊

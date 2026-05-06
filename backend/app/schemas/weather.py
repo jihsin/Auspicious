@@ -19,14 +19,13 @@ class StationInfo(BaseModel):
     name: str = Field(..., description="站點名稱")
     city: str = Field(..., description="所在城市")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "station_id": "466920",
-                "name": "臺北",
-                "city": "臺北市"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "station_id": "466920",
+            "name": "臺北",
+            "city": "臺北市"
         }
+    })
 
 
 class StationInfoExtended(BaseModel):
@@ -116,63 +115,62 @@ class DailyWeatherResponse(BaseModel):
     yi_ji: Optional[YiJiInfo] = Field(None, description="宜忌資訊")
     jieqi: Optional[str] = Field(None, description="當日節氣（如有）")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "station": {
-                    "station_id": "466920",
-                    "name": "臺北",
-                    "city": "臺北市"
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "station": {
+                "station_id": "466920",
+                "name": "臺北",
+                "city": "臺北市"
+            },
+            "month_day": "02-04",
+            "analysis_period": {
+                "years_analyzed": 30,
+                "start_year": 1994,
+                "end_year": 2024
+            },
+            "temperature": {
+                "avg": {
+                    "mean": 16.5,
+                    "median": 16.2,
+                    "stddev": 2.8
                 },
-                "month_day": "02-04",
-                "analysis_period": {
-                    "years_analyzed": 30,
-                    "start_year": 1994,
-                    "end_year": 2024
-                },
-                "temperature": {
-                    "avg": {
-                        "mean": 16.5,
-                        "median": 16.2,
-                        "stddev": 2.8
-                    },
-                    "max_mean": 20.3,
-                    "max_record": {"value": 28.5},
-                    "min_mean": 13.8,
-                    "min_record": {"value": 5.2}
-                },
-                "precipitation": {
-                    "probability": 0.35,
-                    "avg_when_rain": 8.5,
-                    "heavy_probability": 0.02,
-                    "max_record": 85.0
-                },
-                "tendency": {
-                    "sunny": 0.4,
-                    "cloudy": 0.35,
-                    "rainy": 0.25
-                },
-                "computed_at": "2025-01-01T00:00:00",
-                "lunar_date": {
-                    "year": 2025,
-                    "month": 1,
-                    "day": 7,
-                    "year_cn": "二零二五年",
-                    "month_cn": "正月",
-                    "day_cn": "初七",
-                    "ganzhi_year": "乙巳",
-                    "ganzhi_month": "戊寅",
-                    "ganzhi_day": "甲子",
-                    "zodiac": "蛇",
-                    "is_leap": False
-                },
-                "yi_ji": {
-                    "yi": ["祭祀", "祈福"],
-                    "ji": ["動土", "破土"]
-                },
-                "jieqi": "立春"
-            }
+                "max_mean": 20.3,
+                "max_record": {"value": 28.5},
+                "min_mean": 13.8,
+                "min_record": {"value": 5.2}
+            },
+            "precipitation": {
+                "probability": 0.35,
+                "avg_when_rain": 8.5,
+                "heavy_probability": 0.02,
+                "max_record": 85.0
+            },
+            "tendency": {
+                "sunny": 0.4,
+                "cloudy": 0.35,
+                "rainy": 0.25
+            },
+            "computed_at": "2025-01-01T00:00:00",
+            "lunar_date": {
+                "year": 2025,
+                "month": 1,
+                "day": 7,
+                "year_cn": "二零二五年",
+                "month_cn": "正月",
+                "day_cn": "初七",
+                "ganzhi_year": "乙巳",
+                "ganzhi_month": "戊寅",
+                "ganzhi_day": "甲子",
+                "zodiac": "蛇",
+                "is_leap": False
+            },
+            "yi_ji": {
+                "yi": ["祭祀", "祈福"],
+                "ji": ["動土", "破土"]
+            },
+            "jieqi": "立春"
         }
+    })
 
 
 class DailyWeatherSummary(BaseModel):
@@ -333,11 +331,10 @@ class ApiResponse(BaseModel, Generic[T]):
     data: Optional[T] = Field(None, description="回應資料")
     error: Optional[str] = Field(None, description="錯誤訊息")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "data": {},
-                "error": None
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "success": True,
+            "data": {},
+            "error": None
         }
+    })

@@ -2,7 +2,7 @@
 """農曆 API Schema"""
 
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LunarDateInfo(BaseModel):
@@ -19,8 +19,7 @@ class LunarDateInfo(BaseModel):
     生肖: str = Field(..., description="生肖", alias="zodiac")
     is_leap: bool = Field(..., description="是否閏月")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class YiJiInfo(BaseModel):
@@ -35,8 +34,7 @@ class GanzhiInfo(BaseModel):
     月柱: str = Field(..., description="月柱", alias="month_pillar")
     日柱: str = Field(..., description="日柱", alias="day_pillar")
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class LunarResponse(BaseModel):
@@ -47,8 +45,7 @@ class LunarResponse(BaseModel):
     jieqi: Optional[str] = Field(None, description="當日節氣（如有）")
     ganzhi: GanzhiInfo = Field(..., description="干支資訊")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "date": "2026-02-04",
                 "lunar_date": {
@@ -75,4 +72,4 @@ class LunarResponse(BaseModel):
                     "日柱": "甲子"
                 }
             }
-        }
+        })

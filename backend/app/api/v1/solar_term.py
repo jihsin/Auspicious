@@ -148,7 +148,7 @@ async def get_term_by_name(name: str):
     description="取得指定季節的所有節氣"
 )
 async def get_terms_by_season(
-    season: str = Path(..., description="季節 (春/夏/秋/冬)", example="春")
+    season: str = Path(..., description="季節 (春/夏/秋/冬)", examples=["春"])
 ):
     """依季節查詢節氣
 
