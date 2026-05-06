@@ -374,3 +374,54 @@ export interface PlannerResult {
   best_date: DayScore | null;
   summary: string;
 }
+
+// ============================================
+// DayInsight 相關型別 (T7)
+// 對應 backend/app/schemas/day_insight.py
+// ============================================
+
+export interface DayInsightLabel {
+  text: string | null;
+  category: "seasonal" | "anomaly" | "record" | "solar_term" | null;
+}
+
+export interface DayInsightCore {
+  metric: "precip_probability";
+  value: number;
+  anomaly_year: number;
+  anomaly_month: number;
+}
+
+export interface DayInsightSideBadge {
+  metric: "temp_avg" | "humidity_avg";
+  label: string;
+  direction: "above" | "below";
+  z_score: number;
+}
+
+export interface DayInsightExtremeRecord {
+  year: number;
+  value: number;
+}
+
+export interface DayInsightExtremes {
+  wettest: DayInsightExtremeRecord | null;
+  driest: DayInsightExtremeRecord | null;
+}
+
+export interface DayInsightMeta {
+  years_analyzed: number;
+  start_year: number;
+  end_year: number;
+}
+
+export interface DayInsight {
+  station_id: string;
+  month: number;
+  day: number;
+  label: DayInsightLabel;
+  core: DayInsightCore;
+  side_badges: DayInsightSideBadge[];
+  extremes: DayInsightExtremes;
+  meta: DayInsightMeta;
+}

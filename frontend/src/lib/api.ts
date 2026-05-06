@@ -20,6 +20,7 @@ import {
   CurrentSolarTermResponse,
   ActivityType,
   PlannerResult,
+  DayInsight,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -470,6 +471,27 @@ export async function fetchQuickPlan(
     `${API_BASE_URL}/api/v1/planner/quick-plan?${params.toString()}`
   );
   return handleResponse<PlannerResult>(response);
+}
+
+// ============================================
+// DayInsight API
+// ============================================
+
+/**
+ * 取得指定站點某日的差異化日資訊（DayInsightCard）
+ */
+export async function fetchDayInsight(
+  stationId: string,
+  month: number,
+  day: number,
+): Promise<DayInsight> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/day-insight/${stationId}/${month}/${day}`,
+  );
+  if (!response.ok) {
+    throw new Error(`day-insight ${response.status}`);
+  }
+  return response.json();
 }
 
 // ============================================
