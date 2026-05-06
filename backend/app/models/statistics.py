@@ -39,6 +39,10 @@ class DailyStatistics(Base):
         temp_min_mean: 最低溫的平均值
         temp_min_record: 歷史最低溫紀錄
 
+        # 濕度統計 (%)
+        humidity_avg_mean: 平均相對濕度的平均值
+        humidity_avg_stddev: 平均相對濕度的標準差
+
         # 降水統計
         precip_probability: 降雨機率 (0-1)
         precip_avg_when_rain: 有雨日的平均降水量 (mm)
