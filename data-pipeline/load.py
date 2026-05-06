@@ -46,16 +46,18 @@ def load_and_aggregate_csv(csv_path: Path, station_id: str) -> pd.DataFrame:
     # 按日期分組並計算聚合統計
     print("正在聚合為日級資料...")
 
+    # 對於 sum 聚合，使用 min_count=1：當某日所有 hourly 值皆為 NaN 時回傳 NaN，
+    # 避免「資料缺失」被誤判為「沒下雨 / 沒日照 / 沒輻射」。
     daily_agg = df.groupby("observed_date").agg(
         temperature_avg=("temperature", "mean"),
         temperature_max=("temperature", "max"),
         temperature_min=("temperature", "min"),
-        precipitation=("precipitation", "sum"),
+        precipitation=("precipitation", lambda s: s.sum(min_count=1)),
         humidity_avg=("humidity", "mean"),
         wind_speed_avg=("wind_speed", "mean"),
         wind_speed_max=("wind_speed", "max"),
-        sunshine_hours=("sunshine_hours", "sum"),
-        global_radiation_sum=("global_radiation", "sum"),
+        sunshine_hours=("sunshine_hours", lambda s: s.sum(min_count=1)),
+        global_radiation_sum=("global_radiation", lambda s: s.sum(min_count=1)),
         station_pressure_avg=("station_pressure", "mean"),
     ).reset_index()
 
