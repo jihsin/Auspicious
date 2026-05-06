@@ -44,3 +44,36 @@ class DayInsight(BaseModel):
     side_badges: list[SideBadge]
     extremes: Extremes
     meta: InsightMeta
+
+
+class HexagramRef(BaseModel):
+    num: int
+    name: str
+    judgement: str | None = None
+    image: str | None = None
+    upper_trigram: str | None = None  # e.g. "離"
+    lower_trigram: str | None = None
+
+
+class Narrative(BaseModel):
+    climate_portrait: str
+    anomaly_layer: str
+    imagination: str
+
+
+class Divination(BaseModel):
+    ben: HexagramRef
+    zhi: HexagramRef
+    cuo: HexagramRef
+    zong: HexagramRef
+    hu: HexagramRef
+    changing_positions: list[int]
+    line_values: list[int]
+    narrative: Narrative
+
+
+class DayInsightInterpretation(BaseModel):
+    station_id: str
+    month: int
+    day: int
+    divination: Divination
