@@ -2,18 +2,74 @@
 
 import { useEffect, useState } from "react";
 
-import { fetchDayInsight } from "@/lib/api";
+import { fetchDayInsight, fetchDayInterpretation } from "@/lib/api";
 import type { DayInsight } from "@/lib/types";
+import type { DayInsightInterpretation } from "@/lib/types";
 
 import { LabelBadge } from "./DayInsightCard/LabelBadge";
 import { CoreMetric } from "./DayInsightCard/CoreMetric";
 import { SideBadges } from "./DayInsightCard/SideBadges";
 import { ExtremesAnchor } from "./DayInsightCard/ExtremesAnchor";
+import { HexagramDisplay } from "./DayInsightCard/divination/HexagramDisplay";
+import { FourMethodsSummary } from "./DayInsightCard/divination/FourMethodsSummary";
+import { NarrativeSection } from "./DayInsightCard/divination/NarrativeSection";
 
 interface Props {
   stationId: string;
   month: number;
   day: number;
+}
+
+function DivinationDrawer({ stationId, month, day }: Props) {
+  const [data, setData] = useState<DayInsightInterpretation | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDayInterpretation(stationId, month, day)
+      .then(setData)
+      .catch((e: Error) => setError(e.message));
+  }, [stationId, month, day]);
+
+  if (error) {
+    return (
+      <div className="text-sm text-rose-600">詮釋載入失敗：{error}</div>
+    );
+  }
+  if (!data) {
+    return <div className="text-sm text-slate-400">詮釋計算中…</div>;
+  }
+
+  const d = data.divination;
+
+  // 之卦的 line values：把變爻反向
+  // 老陰(6)→少陽(7), 老陽(9)→少陰(8); 不變爻保留
+  const zhiLineValues = d.line_values.map((v, i) => {
+    if (!d.changing_positions.includes(i + 1)) return v;
+    if (v === 9) return 8;
+    if (v === 6) return 7;
+    return v;
+  });
+
+  return (
+    <div className="space-y-4 rounded bg-slate-50 p-3">
+      <HexagramDisplay
+        hex={d.ben}
+        lineValues={d.line_values}
+        changingPositions={d.changing_positions}
+        caption="本卦：氣候畫像"
+      />
+      {d.changing_positions.length > 0 && (
+        <HexagramDisplay
+          hex={d.zhi}
+          lineValues={zhiLineValues}
+          changingPositions={[]}
+          caption="之卦：趨勢"
+        />
+      )}
+      <FourMethodsSummary cuo={d.cuo} zong={d.zong} hu={d.hu} />
+      <NarrativeSection narrative={d.narrative} />
+    </div>
+  );
 }
 
 export function DayInsightCard({ stationId, month, day }: Props) {
@@ -47,10 +103,7 @@ export function DayInsightCard({ stationId, month, day }: Props) {
         {drawerOpen ? "收起詮釋 ▴" : "看詳細詮釋 ▾"}
       </button>
       {drawerOpen && (
-        <div className="rounded bg-slate-50 p-3 text-sm text-slate-700">
-          {/* TODO(T18): replace with DivinationDrawer */}
-          詳細詮釋載入中…（將於 Task 18 接上）
-        </div>
+        <DivinationDrawer stationId={stationId} month={month} day={day} />
       )}
     </div>
   );
