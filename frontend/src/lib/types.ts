@@ -425,3 +425,41 @@ export interface DayInsight {
   extremes: DayInsightExtremes;
   meta: DayInsightMeta;
 }
+
+// ============================================
+// Divination 卦象詮釋型別 (T16)
+// 對應 backend/app/schemas/day_insight.py Divination block
+// ============================================
+
+export interface HexagramRef {
+  num: number;
+  name: string;
+  judgement?: string | null;
+  image?: string | null;
+  upper_trigram?: string | null;
+  lower_trigram?: string | null;
+}
+
+export interface DivinationNarrative {
+  climate_portrait: string;
+  anomaly_layer: string;
+  imagination: string;
+}
+
+export interface Divination {
+  ben: HexagramRef;
+  zhi: HexagramRef;
+  cuo: HexagramRef;
+  zong: HexagramRef;
+  hu: HexagramRef;
+  changing_positions: number[];
+  line_values: number[];
+  narrative: DivinationNarrative;
+}
+
+export interface DayInsightInterpretation {
+  station_id: string;
+  month: number;
+  day: number;
+  divination: Divination;
+}

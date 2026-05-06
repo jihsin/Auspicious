@@ -21,6 +21,7 @@ import {
   ActivityType,
   PlannerResult,
   DayInsight,
+  DayInsightInterpretation,
 } from "./types";
 
 // API 基礎 URL，支援環境變數設定
@@ -490,6 +491,23 @@ export async function fetchDayInsight(
   );
   if (!response.ok) {
     throw new Error(`day-insight ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * 取得指定站點某日的詮釋抽屜內容（卦象 + AI 三層敘事）
+ */
+export async function fetchDayInterpretation(
+  stationId: string,
+  month: number,
+  day: number,
+): Promise<DayInsightInterpretation> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/day-insight/${stationId}/${month}/${day}/interpretation`,
+  );
+  if (!response.ok) {
+    throw new Error(`interpretation ${response.status}`);
   }
   return response.json();
 }
