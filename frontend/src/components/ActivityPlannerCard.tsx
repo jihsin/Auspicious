@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { ActivityType, PlannerResult, DayScore } from "@/lib/types";
 import { fetchActivityTypes, fetchQuickPlan, fetchPlanActivity } from "@/lib/api";
+import { DayInsightCard } from "@/components/DayInsightCard";
 
 interface ActivityPlannerCardProps {
   stationId?: string;
@@ -254,7 +255,7 @@ export function ActivityPlannerCard({
               <h3 className="font-semibold text-gray-700 mb-2">其他推薦日期</h3>
               <div className="space-y-2">
                 {planResult.recommendations.slice(1).map((day, i) => (
-                  <DayScoreRow key={i} day={day} formatDate={formatDate} getScoreColor={getScoreColor} />
+                  <DayScoreRow key={i} day={day} formatDate={formatDate} getScoreColor={getScoreColor} stationId={stationId} />
                 ))}
               </div>
             </div>
@@ -270,10 +271,12 @@ function DayScoreRow({
   day,
   formatDate,
   getScoreColor,
+  stationId,
 }: {
   day: DayScore;
   formatDate: (d: string) => string;
   getScoreColor: (s: number) => string;
+  stationId: string;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -307,6 +310,13 @@ function DayScoreRow({
             <div>降雨機率：{(day.rain_probability * 100).toFixed(0)}%</div>
             <div>平均溫度：{day.temp_avg.toFixed(1)}°C</div>
             <div>晴天比例：{(day.sunny_ratio * 100).toFixed(0)}%</div>
+          </div>
+          <div className="my-3">
+            <DayInsightCard
+              stationId={stationId}
+              month={parseInt(day.date.slice(5, 7), 10)}
+              day={parseInt(day.date.slice(8, 10), 10)}
+            />
           </div>
           <div className="flex flex-wrap gap-1">
             {day.lunar_yi.map((yi, i) => (
