@@ -2,7 +2,6 @@ import type { DayInsightCore } from "@/lib/types";
 
 export function CoreMetric({ core }: { core: DayInsightCore }) {
   const pct = (core.value * 100).toFixed(0);
-  const yearPct = (core.anomaly_year * 100).toFixed(1);
   const monthPct = (core.anomaly_month * 100).toFixed(1);
   const yearArrow = core.anomaly_year > 0.01 ? "↑" : core.anomaly_year < -0.01 ? "↓" : "";
   const yearColor = core.anomaly_year > 0.01 ? "text-rose-600"
