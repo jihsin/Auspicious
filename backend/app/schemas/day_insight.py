@@ -1,10 +1,13 @@
-from typing import Literal, Optional
+from typing import Literal
+
 from pydantic import BaseModel
+
+from app.schemas.common import ExtremeRecord  # noqa: F401 — re-exported for consumers
 
 
 class LabelInfo(BaseModel):
-    text: Optional[str] = None
-    category: Optional[Literal["seasonal", "anomaly", "record", "solar_term"]] = None
+    text: str | None = None
+    category: Literal["seasonal", "anomaly", "record", "solar_term"] | None = None
 
 
 class CoreMetric(BaseModel):
@@ -21,14 +24,9 @@ class SideBadge(BaseModel):
     z_score: float
 
 
-class ExtremeRecord(BaseModel):
-    year: int
-    value: float
-
-
 class Extremes(BaseModel):
-    wettest: Optional[ExtremeRecord] = None
-    driest: Optional[ExtremeRecord] = None
+    wettest: ExtremeRecord | None = None
+    driest: ExtremeRecord | None = None
 
 
 class InsightMeta(BaseModel):
