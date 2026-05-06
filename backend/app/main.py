@@ -1,16 +1,27 @@
 # backend/app/main.py
 """FastAPI 應用程式入口"""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.api.v1 import weather, stations, lunar, solar_term, proverb, ai, planner, daily_report, line_webhook, day_insight
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown lifecycle (replaces deprecated on_event)."""
+    init_db()
+    yield
+
+
 app = FastAPI(
     title="好日子 API",
     description="歷史氣象統計與節氣分析 API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -25,12 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-async def startup():
-    """應用程式啟動時初始化資料庫"""
-    init_db()
 
 
 @app.get("/health")
