@@ -148,6 +148,12 @@ def compute_and_save_statistics(
                 record.temp_min_mean = temp["min_stats"].get("mean")
                 record.temp_min_record = temp["min_stats"].get("min")
 
+        # 濕度統計
+        if "humidity" in stats:
+            humidity = stats["humidity"]
+            record.humidity_avg_mean = humidity.get("mean")
+            record.humidity_avg_stddev = humidity.get("std_dev")
+
         # 降水統計
         if "precipitation" in stats:
             precip = stats["precipitation"]

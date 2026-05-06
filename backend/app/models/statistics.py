@@ -78,6 +78,10 @@ class DailyStatistics(Base):
     temp_min_mean: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     temp_min_record: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
+    # 濕度統計
+    humidity_avg_mean: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    humidity_avg_stddev: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
     # 降水統計
     precip_probability: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     precip_avg_when_rain: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
