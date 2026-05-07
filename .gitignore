@@ -36,3 +36,9 @@ Thumbs.db
 
 # Playwright runtime artifacts (auto-generated yml/log/png from MCP browser tools)
 .playwright-mcp/
+
+# Superpowers brainstorm visual-companion sessions (mockups + server state)
+.superpowers/
+
+# Next.js PWA service worker (auto-generated on each build)
+frontend/public/sw.js
