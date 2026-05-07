@@ -30,6 +30,7 @@ export function HexagramPair({ ben, zhi, lineValues, zhiLineValues, changingPosi
         <>
           <div
             className="flex items-center justify-center text-2xl text-amber-500 sm:px-2"
+            role="img"
             aria-label="變爻轉化"
           >
             <span className="hidden sm:block">→</span>
