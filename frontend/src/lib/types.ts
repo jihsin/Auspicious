@@ -444,6 +444,14 @@ export interface DivinationNarrative {
   climate_portrait: string;
   anomaly_layer: string;
   imagination: string;
+  headline: string;        // NEW · ≤12 字
+  subtitle: string;        // NEW · ≤30 字
+  tags: string[];          // NEW · 3 個 ≤4 字
+}
+
+export interface YaoCiEntry {
+  original: string;
+  vernacular: string;
 }
 
 export interface Divination {
@@ -455,6 +463,7 @@ export interface Divination {
   changing_positions: number[];
   line_values: number[];
   narrative: DivinationNarrative;
+  var_yao_ci: Record<number, YaoCiEntry>;  // NEW
 }
 
 export interface DayInsightInterpretation {
