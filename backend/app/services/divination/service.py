@@ -10,6 +10,7 @@ from app.services.divination.hexagram_table import TRIGRAM_NAMES
 from app.services.divination.hexagrams import get as get_hex
 from app.services.divination.line_mapping import lines_from_weather
 from app.services.divination.narrator import narrate
+from app.services.divination.yao_ci import get_yao_ci
 
 
 def _stat_dist(values: list[float]) -> tuple[float | None, float | None]:
@@ -121,6 +122,11 @@ def build_interpretation(
         solar_term=solar_term,
     )
 
+    var_yao_ci = {
+        pos: get_yao_ci(cast["ben_num"], pos).model_dump()
+        for pos in cast["changing_positions"]
+    }
+
     return {
         "station_id": station_id, "month": month, "day": day,
         "divination": {
@@ -128,5 +134,6 @@ def build_interpretation(
             "changing_positions": cast["changing_positions"],
             "line_values": line_values,
             "narrative": narrative,
+            "var_yao_ci": var_yao_ci,
         },
     }
