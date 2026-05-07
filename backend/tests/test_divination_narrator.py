@@ -44,9 +44,14 @@ def test_narrate_returns_fallback_on_exception(mock_call):
         hu={"num": 1, "name": "乾為天"},
         changing_positions=[], anomalies={}, solar_term="夏至",
     )
-    assert result["climate_portrait"] == ""
-    assert result["anomaly_layer"] == ""
-    assert result["imagination"] == ""
+    assert result == {
+        "climate_portrait": "",
+        "anomaly_layer": "",
+        "imagination": "",
+        "headline": "",
+        "subtitle": "",
+        "tags": [],
+    }
 
 
 @patch("app.services.divination.narrator._call_gemini")
@@ -98,3 +103,11 @@ def test_parse_sections_partial_input_keeps_defaults():
     assert out["climate_portrait"].endswith("只有第一段。")
     assert out["headline"] == ""  # no 段四, default to empty
     assert out["tags"] == []
+
+
+def test_parse_sections_strips_quotation_brackets():
+    """If Gemini wraps tags in 「」, parser must strip them."""
+    from app.services.divination.narrator import _parse_sections
+    raw = "段六【標籤】「偏涼,偏乾,二爻變」"
+    out = _parse_sections(raw)
+    assert out["tags"] == ["偏涼", "偏乾", "二爻變"]
