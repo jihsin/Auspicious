@@ -59,6 +59,14 @@ class Narrative(BaseModel):
     climate_portrait: str
     anomaly_layer: str
     imagination: str
+    headline: str = ""        # NEW · ≤12 字大標
+    subtitle: str = ""        # NEW · ≤30 字副標
+    tags: list[str] = []      # NEW · 3 個，每個 ≤4 字
+
+
+class YaoCiEntry(BaseModel):
+    original: str             # 古文爻辭
+    vernacular: str           # 白話翻譯
 
 
 class Divination(BaseModel):
@@ -70,6 +78,7 @@ class Divination(BaseModel):
     changing_positions: list[int]
     line_values: list[int]
     narrative: Narrative
+    var_yao_ci: dict[int, YaoCiEntry] = {}  # NEW · key = 爻位 (1-6)
 
 
 class DayInsightInterpretation(BaseModel):
