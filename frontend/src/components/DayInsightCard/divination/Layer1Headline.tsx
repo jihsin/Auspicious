@@ -11,7 +11,10 @@ interface Props {
  *  fall back to deterministic anomaly-direction snippets. */
 export function Layer1Headline({ insight, narrative, hasChange }: Props) {
   const fallbackTags = getFallbackTags(insight, hasChange);
-  const tags = narrative.tags.length > 0 ? narrative.tags : fallbackTags;
+  // Defensive: backend may transitionally serve old JSON without `tags`
+  // during a Vercel-vs-Cloud-Run deploy gap. `?? []` guards the .length call.
+  const aiTags = narrative.tags ?? [];
+  const tags = aiTags.length > 0 ? aiTags : fallbackTags;
 
   return (
     <div className="bg-gradient-to-br from-amber-50 to-amber-100 border-b border-amber-200 px-5 py-5">
