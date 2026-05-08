@@ -9,11 +9,19 @@
 5. 更新 has_statistics 標記
 
 使用方式:
+    # 跑既定的 MAIN_STATIONS 列表
     cd data-pipeline && python3 batch_process.py
+
+    # 跑指定站點（從 CLI 指定）
+    cd data-pipeline && python3 batch_process.py --stations 467270,467280,467290
+
+    # 從 CLI 指定 + 指定起始年份 + 跳過已處理的站
+    python3 batch_process.py --stations 467270 --start-year 2000 --skip-existing
 
 注意：此程序會耗費較長時間（每站約 5-10 分鐘）
 """
 
+import argparse
 import sys
 import time
 from datetime import datetime
@@ -252,6 +260,39 @@ def update_station_statistics_flag(db_path: Path, station_id: str, has_statistic
 
 def main():
     """主程式進入點"""
+    # --- 解析 CLI 參數 ---
+    parser = argparse.ArgumentParser(
+        description="好日子批量資料處理程式",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "範例:\n"
+            "  # 跑既定的 MAIN_STATIONS 列表\n"
+            "  python3 batch_process.py\n\n"
+            "  # 跑指定站點\n"
+            "  python3 batch_process.py --stations 467270,467280\n\n"
+            "  # 指定站點 + 起始年份 + 跳過已處理站\n"
+            "  python3 batch_process.py --stations 467270 --start-year 2000 --skip-existing\n"
+        ),
+    )
+    parser.add_argument(
+        "--stations",
+        metavar="ID1,ID2,...",
+        help="以逗號分隔的站點代碼，覆蓋 MAIN_STATIONS 列表。站點名稱從資料庫即時查詢。",
+    )
+    parser.add_argument(
+        "--start-year",
+        type=int,
+        default=1991,
+        metavar="YEAR",
+        help="CLI 指定站點的資料起始年份（預設: 1991）。對 MAIN_STATIONS 無效。",
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="跳過在 daily_statistics 已有資料的站點（預設: 重新處理，冪等重跑）。",
+    )
+    args = parser.parse_args()
+
     # 設定路徑
     raw_dir = project_root / "data" / "raw"
     processed_dir = project_root / "data" / "processed"
@@ -261,20 +302,49 @@ def main():
     raw_dir.mkdir(parents=True, exist_ok=True)
     processed_dir.mkdir(parents=True, exist_ok=True)
 
+    # --- 建立資料庫連線（後續查詢共用）---
+    engine = create_engine(f"sqlite:///{db_path}", echo=False)
+
+    # --- 決定待處理站點清單 ---
+    if args.stations:
+        # CLI 模式：從 --stations 解析站點 ID，並從資料庫查詢站名
+        raw_ids = [s.strip() for s in args.stations.split(",") if s.strip()]
+        if not raw_ids:
+            print("[錯誤] --stations 參數不可為空，請提供至少一個站點代碼。")
+            sys.exit(1)
+
+        targets: list[tuple[str, str, int]] = []
+        with Session(engine) as session:
+            for sid in raw_ids:
+                station = session.query(Station).filter(
+                    Station.station_id == sid
+                ).first()
+                if station is None:
+                    print(f"[錯誤] 站點代碼 {sid!r} 不存在於資料庫 stations 表，請確認後重試。")
+                    sys.exit(1)
+                targets.append((sid, station.name, args.start_year))
+    else:
+        # 預設模式：使用 MAIN_STATIONS（向下相容）
+        targets = list(MAIN_STATIONS)
+
+    # skip_completed 語意：CLI --skip-existing 旗標 OR 預設模式沿用舊行為（True）
+    # 舊程式預設 skip_completed = True，但 CLI 模式預設為 False（冪等重跑），
+    # 除非使用者明確加上 --skip-existing。
+    if args.stations:
+        skip_completed = args.skip_existing  # CLI 模式：由旗標決定
+    else:
+        skip_completed = True  # MAIN_STATIONS 模式：維持舊預設行為
+
     print("=" * 60)
     print("好日子批量資料處理程式")
     print("=" * 60)
     print(f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"資料庫: {db_path}")
-    print(f"待處理站點: {len(MAIN_STATIONS)} 個")
+    print(f"待處理站點: {len(targets)} 個")
     print()
 
-    # 詢問是否跳過已完成的站點
-    skip_completed = True  # 預設跳過已完成的
-
     # 檢查哪些站點已經有統計資料
-    engine = create_engine(f"sqlite:///{db_path}", echo=False)
-    completed_stations = set()
+    completed_stations: set[str] = set()
 
     with Session(engine) as session:
         stations_with_stats = session.query(Station).filter(
@@ -283,7 +353,7 @@ def main():
         completed_stations = {s.station_id for s in stations_with_stats}
 
     print(f"已完成站點: {len(completed_stations)} 個")
-    for station_id, name, _ in MAIN_STATIONS:
+    for station_id, name, _ in targets:
         status = "✓ 已完成" if station_id in completed_stations else "○ 待處理"
         print(f"  {status}: {name} ({station_id})")
 
@@ -293,7 +363,7 @@ def main():
     results = []
     start_time = time.time()
 
-    for station_id, station_name, start_year in MAIN_STATIONS:
+    for station_id, station_name, start_year in targets:
         # 跳過已完成的站點
         if skip_completed and station_id in completed_stations:
             print(f"\n跳過已完成站點: {station_name} ({station_id})")
