@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,7 @@ from app.models.station import Station
 from app.schemas.day_insight import DayInsight, DayInsightInterpretation
 from app.services.day_insight.service import build_day_insight
 from app.services.divination.service import build_interpretation
+from app.services.solar_term import get_current_solar_term
 
 router = APIRouter()
 
@@ -30,7 +32,17 @@ def _cached_interpretation(station_id: str, month: int, day: int):
     try:
         station = db.query(Station).filter_by(station_id=station_id).first()
         name = station.name if station else ""
-        return build_interpretation(db, station_id, month, day, station_name=name)
+        # Resolve solar_term for narrator's prompt. Use current year as the
+        # representative date — boundaries shift ~1 day/year, accurate enough.
+        try:
+            solar_term = get_current_solar_term(date(datetime.now().year, month, day))
+        except ValueError:
+            # Feb 29 in non-leap year, etc. — narrator handles None.
+            solar_term = None
+        return build_interpretation(
+            db, station_id, month, day,
+            station_name=name, solar_term=solar_term,
+        )
     finally:
         db.close()
 
