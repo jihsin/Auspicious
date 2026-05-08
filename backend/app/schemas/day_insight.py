@@ -53,6 +53,7 @@ class HexagramRef(BaseModel):
     image: str | None = None
     upper_trigram: str | None = None  # e.g. "離"
     lower_trigram: str | None = None
+    weather_persona: str | None = None  # NEW · ≤30 字 weather-relatable life advice
 
 
 class Narrative(BaseModel):
