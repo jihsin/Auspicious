@@ -98,6 +98,7 @@ def build_interpretation(
             "name": meta["name"],
             "judgement": meta.get("judgement", ""),
             "image": meta.get("image", ""),
+            "weather_persona": meta.get("weather_persona", ""),
         }
 
     upper_name = TRIGRAM_NAMES[cast["upper_bits"]]
