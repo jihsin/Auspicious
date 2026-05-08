@@ -44,7 +44,7 @@ export function DivinationDrawer({ insight }: Props) {
 
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm">
-      <Layer1Headline insight={insight} narrative={d.narrative} hasChange={hasChange} />
+      <Layer1Headline insight={insight} narrative={d.narrative} ben={d.ben} hasChange={hasChange} />
       <Layer2Visual divination={d} zhiLineValues={zhiLineValues} />
       <Layer3Academic divination={d} />
     </div>
