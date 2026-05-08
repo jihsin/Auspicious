@@ -438,6 +438,7 @@ export interface HexagramRef {
   image?: string | null;
   upper_trigram?: string | null;
   lower_trigram?: string | null;
+  weather_persona?: string;  // NEW · ≤30 字 weather-relatable life advice
 }
 
 export interface DivinationNarrative {
